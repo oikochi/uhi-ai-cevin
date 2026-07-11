@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UHI Surabaya — Dashboard & AI</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+  :root{--navy:#0B1F3A;--red:#7A1E1E;--cream:#F7F4EF;--z-r:#2c7bb6;--z-s:#abd9e9;--z-t:#fdae61;--z-st:#d7191c;--card:#fff;--border:#e2ddd6;--text:#1a1a1a;--muted:#6b6560;--ai-bg:#e8f5f0;--ai-b:#0B3D2E}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:var(--cream);color:var(--text)}
+  header{background:var(--navy);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+  .logo{font-size:1.4rem;font-weight:800}.logo span{color:#fdae61}
+  .tagline{font-size:.78rem;opacity:.7;margin-top:2px}
+  .badge{margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 14px;font-size:.75rem;display:flex;align-items:center;gap:6px}
+  .dot{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:blink 1.5s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .main{display:grid;grid-template-columns:1fr 370px;height:calc(100vh - 60px)}
+  .map-col{position:relative}
+  #map{height:100%;width:100%}
+  .map-hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(11,31,58,.88);color:#fff;padding:6px 16px;border-radius:20px;font-size:.78rem;z-index:999;pointer-events:none}
+  .right-col{background:var(--cream);display:flex;flex-direction:column;border-left:1px solid var(--border);overflow:hidden}
+  .tabs{display:flex;border-bottom:2px solid var(--border);background:var(--card)}
+  .tab{flex:1;padding:11px 4px;text-align:center;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--muted);border:none;background:none;transition:.15s}
+  .tab.active{color:var(--navy);border-bottom:3px solid var(--navy);margin-bottom:-2px}
+  .tab-panel{display:none;flex:1;overflow-y:auto;flex-direction:column}
+  .tab-panel.active{display:flex}
+  /* ANALISIS */
+  .placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);padding:24px;text-align:center}
+  .kcard{padding:16px}
+  .khdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+  .kname{font-size:1.2rem;font-weight:700;color:var(--navy)}
+  .kkec{font-size:.78rem;color:var(--muted);margin-top:2px}
+  .zbadge{padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;color:#fff;margin-left:auto;white-space:nowrap}
+  .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .sbox{background:var(--cream);border-radius:8px;padding:10px}
+  .sval{font-size:1.3rem;font-weight:800;color:var(--navy)}
+  .slbl{font-size:.7rem;color:var(--muted);margin-top:2px}
+  .bwrap{margin-bottom:5px}
+  .blbl{font-size:.72rem;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:3px}
+  .bar{height:7px;border-radius:4px;background:var(--border);overflow:hidden}
+  .bfill{height:100%;border-radius:4px;transition:width .6s}
+  .rsec{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+  .rtitle{font-size:.78rem;font-weight:700;color:var(--navy);margin-bottom:7px}
+  .ritem{display:flex;gap:7px;margin-bottom:7px;align-items:flex-start;font-size:.8rem}
+  .rico{flex-shrink:0;width:18px;height:18px;background:var(--navy);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700}
+  .airekom{margin-top:10px;background:var(--ai-bg);border-left:3px solid var(--ai-b);border-radius:0 8px 8px 0;padding:10px;font-size:.8rem;line-height:1.5}
+  /* CHAT */
+  .cwrap{display:flex;flex-direction:column;flex:1;min-height:0}
+  .cmsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:88%;padding:9px 13px;border-radius:14px;font-size:.84rem;line-height:1.55}
+  .msg.user{background:var(--navy);color:#fff;align-self:flex-end;border-radius:14px 14px 4px 14px}
+  .msg.ai{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-radius:14px 14px 14px 4px}
+  .sndr{font-size:.7rem;font-weight:700;color:var(--ai-b);margin-bottom:3px}
+  .dots{display:flex;gap:4px;padding:4px 0}
+  .dots span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:dp 1.2s ease-in-out infinite}
+  .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+  @keyframes dp{0%,80%,100%{transform:scale(1);opacity:.5}40%{transform:scale(1.3);opacity:1}}
+  .cinput{padding:10px 12px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0}
+  .suggs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+  .sugg{font-size:.72rem;background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:3px 9px;cursor:pointer;color:var(--navy);transition:.15s}
+  .sugg:hover{background:var(--navy);color:#fff}
+  .crow{display:flex;gap:7px}
+  #ci{flex:1;border:1.5px solid var(--border);border-radius:20px;padding:8px 14px;font-size:.84rem;outline:none;background:var(--cream)}
+  #ci:focus{border-color:var(--navy)}
+  #sb{background:var(--navy);color:#fff;border:none;border-radius:20px;padding:8px 18px;font-size:.82rem;cursor:pointer;font-weight:600;transition:.15s}
+  #sb:hover{background:#1a3a6a}#sb:disabled{opacity:.5;cursor:not-allowed}
+  /* INFO */
+  .isec{padding:16px}
+  .isec h3{font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:10px}
+  .zlist{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+  .zitem{display:flex;align-items:center;gap:9px}
+  .zdot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+  .zdesc{font-size:.8rem}
+  .ssum{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ssbox{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+  .ssnum{font-size:1.2rem;font-weight:800;color:var(--red)}
+  .sslbl{font-size:.7rem;color:var(--muted);margin-top:2px}
+  ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  @media(max-width:768px){.main{grid-template-columns:1fr;grid-template-rows:50vh 1fr}.right-col{border-left:none;border-top:1px solid var(--border)}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">UHI <span>Surabaya</span></div>
+    <div class="tagline">Dashboard Termal &amp; Asisten AI — Klimatologi STMKG 2026</div>
+  </div>
+  <div class="badge"><div class="dot"></div>AI Aktif</div>
+</header>
+
+<div class="main">
+  <div class="map-col">
+    <div class="map-hint">🖱️ Klik kelurahan untuk analisis detail</div>
+    <div id="map"></div>
+  </div>
+  <div class="right-col">
+    <div class="tabs">
+      <button class="tab active" data-tab="analisis">📊 Analisis</button>
+      <button class="tab" data-tab="chat">🤖 Tanya AI</button>
+      <button class="tab" data-tab="info">ℹ️ Info</button>
+    </div>
+    <div id="panel-analisis" class="tab-panel active">
+      <div class="placeholder" id="ph">
+        <span style="font-size:2.5rem">📍</span>
+        <p><b>Klik kelurahan</b> di peta untuk melihat<br>analisis termal &amp; rekomendasi mitigasi</p>
+      </div>
+      <div id="detail" style="display:none"></div>
+    </div>
+    <div id="panel-chat" class="tab-panel">
+      <div class="cwrap">
+        <div class="cmsgs" id="cmsgs">
+          <div class="msg ai">
+            <div class="sndr">🤖 Asisten UHI Surabaya</div>
+            Halo! Saya AI yang siap menjawab pertanyaan tentang <b>Urban Heat Island Kota Surabaya</b>.<br>Punya data 162 kelurahan dari penelitian Cevin Abinaya Malewa (STMKG, 2026).<br><br>Coba tanya apa saja! 👇
+          </div>
+        </div>
+        <div class="cinput">
+          <div class="suggs">
+            <span class="sugg">Kelurahan terpanas?</span>
+            <span class="sugg">Kenapa Perak Barat panas?</span>
+            <span class="sugg">Apa zona Sangat Tinggi?</span>
+            <span class="sugg">Rekomendasi mitigasi?</span>
+            <span class="sugg">Proyeksi suhu 2029?</span>
+          </div>
+          <div class="crow">
+            <input id="ci" type="text" placeholder="Tanya tentang UHI Surabaya...">
+            <button id="sb">Kirim</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="panel-info" class="tab-panel">
+      <div class="isec">
+        <h3>Legenda Zona Intensitas UHI</h3>
+        <div class="zlist">
+          <div class="zitem"><div class="zdot" style="background:#2c7bb6"></div><div class="zdesc"><b>Rendah</b> — 13 kel | 36,99°C | vegetasi baik</div></div>
+          <div class="zitem"><div class="zdot" style="background:#abd9e9"></div><div class="zdesc"><b>Sedang</b> — 34 kel | 40,20°C | transisi</div></div>
+          <div class="zitem"><div class="zdot" style="background:#fdae61"></div><div class="zdesc"><b>Tinggi</b> — 71 kel | 42,25°C | urban padat</div></div>
+          <div class="zitem"><div class="zdot" style="background:#d7191c"></div><div class="zdesc"><b>Sangat Tinggi (Inti UHI)</b> — 45 kel | 42,54°C</div></div>
+        </div>
+        <h3>Ringkasan Hasil Penelitian</h3>
+        <div class="ssum">
+          <div class="ssbox"><div class="ssnum">43,86°C</div><div class="sslbl">LST Tertinggi (Perak Barat)</div></div>
+          <div class="ssbox"><div class="ssnum">34,61°C</div><div class="sslbl">LST Terendah (Tambakdono)</div></div>
+          <div class="ssbox"><div class="ssnum">+0,906</div><div class="sslbl">Korelasi NDBI↔LST</div></div>
+          <div class="ssbox"><div class="ssnum">28,6°C</div><div class="sslbl">Proyeksi Suhu 2029</div></div>
+          <div class="ssbox"><div class="ssnum">0,374</div><div class="sslbl">Silhouette K-Means</div></div>
+          <div class="ssbox"><div class="ssnum">87,9%</div><div class="sslbl">Akurasi RF (internal)</div></div>
+        </div>
+        <p style="margin-top:14px;font-size:.76rem;color:var(--muted);line-height:1.6">
+          Data: Landsat 8/9, Dynamic World V1 (GEE), BMKG Tanjung Perak 2009–2023, BIG RBI 1:10.000.<br>
+          <b>Cevin Abinaya Malewa</b> — Klimatologi STMKG · <a href="https://github.com/oikochi/uhi-ai-cevin" target="_blank" style="color:var(--navy)">GitHub</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+const WARNA={"Rendah":"#2c7bb6","Sedang":"#abd9e9","Tinggi":"#fdae61","Sangat Tinggi":"#d7191c"};
+const ZONA_MAP={"Dingin":"Rendah","Sedang":"Sedang","Panas":"Tinggi","Sangat Panas":"Sangat Tinggi"};
+
+// ── SISTEM AI (berbasis pengetahuan lokal, tanpa API key) ──
+const KB_DATA = {
+  ringkasan: "Penelitian UHI Surabaya oleh Cevin Abinaya Malewa (Klimatologi STMKG, 2026). 162 kelurahan, 4 zona intensitas.",
+  zona: {
+    "Rendah": {n:13, lst:"36,99°C", ciri:"vegetasi baik, pinggiran kota (Pakal, Benowo, Sukolilo)"},
+    "Sedang": {n:34, lst:"40,20°C", ciri:"transisi urban-hijau"},
+    "Tinggi": {n:71, lst:"42,25°C", ciri:"urban padat, fraksi terbangun 96%"},
+    "Sangat Tinggi": {n:45, lst:"42,54°C", ciri:"inti kota terpadat, kepadatan 23.236 jiwa/km², fraksi terbangun 98%"}
+  },
+  terpanas: [{nm:"Perak Barat",kc:"Krembangan",lst:"43,86°C"},{nm:"Asemrowo",kc:"Asemrowo",lst:"43,70°C"},{nm:"Kendangsari",kc:"Tenggilis Mejoyo",lst:"43,60°C"}],
+  terdingin: [{nm:"Tambakdono",kc:"Pakal",lst:"34,61°C"},{nm:"Keputih",kc:"Sukolilo",lst:"35,48°C"},{nm:"Sumberrejo",kc:"Pakal",lst:"35,49°C"}],
+  faktor: "Faktor terkuat: NDBI (r=+0,906), fraksi terbangun (r=+0,848). NDVI protektif (r=-0,575). Feature importance RF: NDBI 0,225, kepadatan 0,180.",
+  lstm: "Proyeksi suhu udara BMKG 2025-2029: rata-rata 28,64°C, naik +0,16°C. Ini suhu udara stasiun, bukan LST permukaan.",
+  anova: "ANOVA: F=251,1 p<0,001 η²=0,83. Zona Tinggi vs Sangat Tinggi tidak beda signifikan di LST (Δ=0,29°C), bedanya di kepadatan.",
+  mitigasi: "Rekomendasi: tambah RTH minimal 30% di zona Sangat Tinggi, atap hijau bangunan tinggi, SPAH untuk kelembapan. Prioritas: Krembangan Utara, Putat Jaya, Wonorejo, Perak Timur, Kupang Krajan."
+};
+
+function jawabAI(pertanyaan) {
+  const p = pertanyaan.toLowerCase();
+  if (p.includes("terpanas") || p.includes("paling panas")) {
+    const t = KB_DATA.terpanas;
+    return `🔴 <b>5 Kelurahan Terpanas:</b><br>1. ${t[0].nm} (${t[0].kc}) — ${t[0].lst}<br>2. ${t[1].nm} (${t[1].kc}) — ${t[1].lst}<br>3. ${t[2].nm} (${t[2].kc}) — ${t[2].lst}<br><br>Kelurahan-kelurahan ini ada di Zona Tinggi/Sangat Tinggi dengan fraksi terbangun >95% dan vegetasi sangat minim.`;
+  }
+  if (p.includes("terdingin") || p.includes("paling dingin")) {
+    const t = KB_DATA.terdingin;
+    return `🔵 <b>Kelurahan Terdingin:</b><br>1. ${t[0].nm} (${t[0].kc}) — ${t[0].lst}<br>2. ${t[1].nm} (${t[1].kc}) — ${t[1].lst}<br>3. ${t[2].nm} (${t[2].kc}) — ${t[2].lst}<br><br>Kelurahan-kelurahan ini masih memiliki vegetasi dan tutupan hijau yang baik.`;
+  }
+  if (p.includes("perak barat")) {
+    return `🔴 <b>Perak Barat (Krembangan)</b> adalah kelurahan terpanas dengan LST 43,86°C.<br><br>Penyebabnya: fraksi terbangun sangat tinggi (hampir 100%), sangat sedikit vegetasi (NDVI rendah), dan berada di kawasan industri/pelabuhan dengan aktivitas panas tinggi. Ini adalah titik paling kritis untuk intervensi mitigasi.`;
+  }
+  if (p.includes("sangat tinggi") || p.includes("inti uhi")) {
+    const z = KB_DATA.zona["Sangat Tinggi"];
+    return `🔴 <b>Zona Sangat Tinggi (Inti UHI)</b> — ${z.n} kelurahan, LST rata-rata ${z.lst}.<br><br>Ciri: ${z.ciri}.<br><br>Menariknya, zona ini dibedakan dari Zona Tinggi bukan oleh suhu (selisih hanya 0,29°C) tapi oleh <b>kepadatan penduduk</b> (23.236 vs 9.883 jiwa/km²). Ini zona prioritas mitigasi tertinggi.`;
+  }
+  if (p.includes("mitigasi") || p.includes("solusi") || p.includes("rekomendasi")) {
+    return `🌿 <b>Rekomendasi Mitigasi:</b><br><br>1. 🌳 Tambah RTH minimal 30% di zona Sangat Tinggi<br>2. 🏗️ Terapkan atap hijau & dinding hijau<br>3. 💧 Optimalkan SPAH (Sistem Penampungan Air Hujan)<br>4. 🌿 Setiap penambahan NDVI 0,1 → potensi turunkan LST ~0,6°C<br><br><b>Prioritas kelurahan:</b> Krembangan Utara, Putat Jaya, Wonorejo, Perak Timur, Kupang Krajan.`;
+  }
+  if (p.includes("proyeksi") || p.includes("2029") || p.includes("lstm") || p.includes("masa depan")) {
+    return `📈 <b>Proyeksi LSTM 2025–2029:</b><br><br>• Suhu udara rata-rata: <b>28,64°C</b><br>• Kecenderungan naik: <b>+0,16°C</b> dalam 5 tahun<br>• MAE: 0,61°C | RMSE: 0,80°C | R²: 0,233<br><br>⚠️ Catatan: ini adalah proyeksi <b>tren</b> suhu udara dari Stasiun BMKG Tanjung Perak — berbeda dari LST permukaan (~42°C). Nilai R² rendah menandakan proyeksi sebagai indikasi arah, bukan prediksi presisi.`;
+  }
+  if (p.includes("faktor") || p.includes("penyebab") || p.includes("ndbi") || p.includes("ndvi")) {
+    return `🔍 <b>Faktor Dominan UHI Surabaya:</b><br><br>1. <b>NDBI</b> — r = +0,906 (sangat kuat → makin banyak bangunan, makin panas)<br>2. <b>Fraksi Terbangun</b> — r = +0,848 (sangat kuat)<br>3. <b>Kepadatan Penduduk</b> — r = +0,426 (sedang)<br>4. <b>NDVI</b> — r = −0,575 (protektif: vegetasi mendinginkan)<br><br>Feature importance Random Forest menempatkan NDBI (0,225) dan kepadatan (0,180) sebagai penentu utama.`;
+  }
+  if (p.includes("zona") || p.includes("klasifikasi") || p.includes("kmeans") || p.includes("k-means")) {
+    return `🗺️ <b>Hasil K-Means (4 Zona Intensitas UHI):</b><br><br>🔵 <b>Rendah</b> — 13 kel | 36,99°C | pinggiran hijau<br>🩵 <b>Sedang</b> — 34 kel | 40,20°C | transisi<br>🟠 <b>Tinggi</b> — 71 kel | 42,25°C | urban padat<br>🔴 <b>Sangat Tinggi</b> — 45 kel | 42,54°C | inti kota<br><br>Silhouette Score: 0,374 (marginal — zona dibaca sebagai gradien, bukan batas tegas).`;
+  }
+  if (p.includes("data") || p.includes("sumber") || p.includes("landsat") || p.includes("bmkg")) {
+    return `📊 <b>Data yang Digunakan:</b><br><br>🛰️ Landsat 8/9 + Dynamic World V1 (Google Earth Engine) → LST, NDVI, NDBI, NDWI, fraksi terbangun<br>🌡️ BMKG Tanjung Perak 2009–2023 → input LSTM<br>🗺️ BIG RBI 1:10.000 → batas 154 kelurahan<br>👥 BPS → kepadatan penduduk (level kecamatan)`;
+  }
+  if (p.includes("metode") || p.includes("random forest") || p.includes("rf")) {
+    return `🤖 <b>Metode Penelitian:</b><br><br>1. <b>K-Means</b> — zonasi spasial UHI (4 zona)<br>2. <b>Random Forest</b> — faktor dominan via feature importance (akurasi 87,9% internal terhadap label K-Means)<br>3. <b>LSTM</b> — proyeksi tren suhu 2025–2029<br><br>Catatan: akurasi RF 87,9% adalah konsistensi internal (target = label K-Means), bukan validasi independen.`;
+  }
+  // default
+  return `Terima kasih atas pertanyaannya! 🙂<br><br>Saya bisa menjawab tentang:<br>• Kelurahan terpanas/terdingin<br>• Zona intensitas UHI (Rendah → Sangat Tinggi)<br>• Faktor penyebab (NDBI, NDVI, kepadatan)<br>• Proyeksi suhu 2025–2029<br>• Metode K-Means, Random Forest, LSTM<br>• Rekomendasi mitigasi<br><br>Coba tanya salah satunya! 👆`;
+}
+
+// ── TABS ──
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+  });
+});
+
+// ── PETA ──
+const map=L.map('map').setView([-7.28,112.73],12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  {attribution:'© OpenStreetMap © CARTO',maxZoom:19}).addTo(map);
+let sel=null;
+
+const sty=f=>{
+  const p=f.properties;
+  const z=p.zona||ZONA_MAP[p.zona_iklim]||'Sedang';
+  return{fillColor:WARNA[z]||'#ccc',weight:.7,color:'#fff',fillOpacity:.82};
+};
+
+fetch('data/surabaya_uhi.geojson').then(r=>r.json()).then(gj=>{
+  const gl=L.geoJSON(gj,{
+    style:sty,
+    onEachFeature:(f,layer)=>{
+      const p=f.properties;
+      const nm=p.WADMKD||'',kc=p.WADMKC||'';
+      const z=p.zona||ZONA_MAP[p.zona_iklim]||'-';
+      const lst=p.LST_mean?+p.LST_mean.toFixed(2):0;
+      const wz=WARNA[z]||'#888';
+      layer.bindPopup(`<b style="font-size:13px">${nm}</b><br><span style="color:#666;font-size:11px">${kc}</span><br><span style="background:${wz};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">${z}</span><br><span style="font-size:12px">LST: <b>${lst}°C</b></span>`);
+      layer.on('click',()=>{
+        if(sel)sel.setStyle(sty(sel.feature));
+        layer.setStyle({weight:2.5,color:'#333',fillOpacity:.95}); sel=layer;
+        showDetail(nm,kc,z,lst,p);
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(t=>t.classList.remove('active'));
+        document.querySelector('[data-tab="analisis"]').classList.add('active');
+        document.getElementById('panel-analisis').classList.add('active');
+      });
+      layer.on('mouseover',()=>{if(layer!==sel)layer.setStyle({fillOpacity:1,weight:1.5,color:'#333'})});
+      layer.on('mouseout',()=>{if(layer!==sel)layer.setStyle(sty(f))});
+    }
+  }).addTo(map);
+  map.fitBounds(gl.getBounds());
+}).catch(()=>document.querySelector('.map-hint').textContent='⚠ Gagal muat data peta');
+
+// ── ANALISIS ──
+function getRekom(z,ndvi,fraksi){
+  const r=[];
+  if(ndvi<0.2)r.push('🌿 Tambah RTH mendesak — NDVI hanya '+ndvi.toFixed(3)+', vegetasi sangat minim.');
+  if(fraksi>0.95)r.push('🏗️ Kendalikan bangunan baru — terbangun '+(fraksi*100).toFixed(0)+'%, hampir tidak ada ruang hijau.');
+  if(z==='Sangat Tinggi')r.push('🌳 Terapkan atap hijau & dinding hijau pada gedung-gedung tinggi.');
+  if(z==='Tinggi'||z==='Sangat Tinggi')r.push('💧 Optimalkan SPAH untuk meningkatkan kelembapan udara mikro.');
+  if(!r.length)r.push('✅ Pertahankan tutupan hijau yang sudah baik.');
+  return r;
+}
+
+function showDetail(nm,kc,z,lst,props){
+  document.getElementById('ph').style.display='none';
+  const el=document.getElementById('detail'); el.style.display='block';
+  const ndvi=+(props.NDVI_mean||0).toFixed(3),fraksi=+(props.fraksi_terbangun||0),kpd=+(props.kepadatan_per_km2||0);
+  const wz=WARNA[z]||'#888', lstC=lst>42?'#d7191c':lst>40?'#e07b00':'#2c7bb6';
+  const rekoms=getRekom(z,ndvi,fraksi);
+  el.innerHTML=`<div class="kcard">
+    <div class="khdr">
+      <div><div class="kname">${nm}</div><div class="kkec">Kec. ${kc}</div></div>
+      <div class="zbadge" style="background:${wz}">${z}</div>
+    </div>
+    <div class="sgrid">
+      <div class="sbox"><div class="sval" style="color:${lstC}">${lst.toFixed(2)}°C</div><div class="slbl">Suhu Permukaan (LST)</div></div>
+      <div class="sbox"><div class="sval">${ndvi.toFixed(3)}</div><div class="slbl">NDVI (Vegetasi)</div></div>
+      <div class="sbox"><div class="sval">${(fraksi*100).toFixed(0)}%</div><div class="slbl">Fraksi Terbangun</div></div>
+      <div class="sbox"><div class="sval">${kpd?kpd.toLocaleString('id'):'-'}</div><div class="slbl">Kepadatan (jiwa/km²)</div></div>
+    </div>
+    <div class="bwrap">
+      <div class="blbl"><span>Intensitas UHI</span><span>${(lst/43.9*100).toFixed(0)}%</span></div>
+      <div class="bar"><div class="bfill" style="width:${lst/43.9*100}%;background:${wz}"></div></div>
+    </div>
+    <div class="bwrap">
+      <div class="blbl"><span>Tutupan Terbangun</span><span>${(fraksi*100).toFixed(0)}%</span></div>
+      <div class="bar"><div class="bfill" style="width:${fraksi*100}%;background:${fraksi>.8?'#d7191c':fraksi>.5?'#fdae61':'#2c7bb6'}"></div></div>
+    </div>
+    <div class="bwrap">
+      <div class="blbl"><span>Indeks Vegetasi (NDVI)</span><span>${(Math.min(ndvi/.5,1)*100).toFixed(0)}%</span></div>
+      <div class="bar"><div class="bfill" style="width:${Math.min(ndvi/.5,1)*100}%;background:#4CAF50"></div></div>
+    </div>
+    <div class="rsec">
+      <div class="rtitle">🎯 Rekomendasi Mitigasi</div>
+      ${rekoms.map((r,i)=>`<div class="ritem"><div class="rico">${i+1}</div><div>${r}</div></div>`).join('')}
+    </div>
+    <div class="airekom">
+      <b style="font-size:.72rem;color:var(--ai-b)">🤖 Analisis AI</b><br>
+      <span style="font-size:.8rem">${getAIAnalisis(nm,z,lst,ndvi,fraksi)}</span>
+    </div>
+  </div>`;
+}
+
+function getAIAnalisis(nm,z,lst,ndvi,fraksi){
+  if(z==='Sangat Tinggi')return `${nm} termasuk zona inti UHI dengan LST ${lst.toFixed(1)}°C dan fraksi terbangun ${(fraksi*100).toFixed(0)}%. Ini adalah kelurahan prioritas mitigasi — butuh penghijauan segera dan pengendalian ekspansi bangunan.`;
+  if(z==='Tinggi')return `${nm} berada di zona panas dengan LST ${lst.toFixed(1)}°C. NDVI yang rendah (${ndvi.toFixed(3)}) menunjukkan minimnya vegetasi — penambahan RTH dan penghijauan jalan akan efektif menurunkan suhu.`;
+  if(z==='Sedang')return `${nm} berada di zona transisi dengan LST ${lst.toFixed(1)}°C. Pertahankan dan tingkatkan tutupan vegetasi (NDVI ${ndvi.toFixed(3)}) agar tidak beralih ke zona Tinggi.`;
+  return `${nm} adalah salah satu kelurahan terdingin dengan LST ${lst.toFixed(1)}°C dan NDVI ${ndvi.toFixed(3)}. Pertahankan tutupan hijau ini sebagai buffer termal kota.`;
+}
+
+// ── CHATBOT (berbasis KB lokal) ──
+let hist=[];
+const cmsgs=document.getElementById('cmsgs');
+const ci=document.getElementById('ci'), sb=document.getElementById('sb');
+
+function addMsg(txt,role){
+  const el=document.createElement('div'); el.className='msg '+role;
+  if(role==='ai')el.innerHTML=`<div class="sndr">🤖 Asisten UHI</div>${txt}`;
+  else el.textContent=txt;
+  cmsgs.appendChild(el); cmsgs.scrollTop=9999; return el;
+}
+function addTyping(){
+  const el=document.createElement('div'); el.className='msg ai';
+  el.innerHTML=`<div class="sndr">🤖 Asisten UHI</div><div class="dots"><span></span><span></span><span></span></div>`;
+  cmsgs.appendChild(el); cmsgs.scrollTop=9999; return el;
+}
+
+async function sendChat(){
+  const txt=ci.value.trim(); if(!txt)return;
+  ci.value=''; addMsg(txt,'user');
+  sb.disabled=ci.disabled=true;
+  const ty=addTyping();
+  // simulasi delay agar terasa natural
+  await new Promise(r=>setTimeout(r,600+Math.random()*400));
+  ty.remove();
+  addMsg(jawabAI(txt),'ai');
+  sb.disabled=ci.disabled=false; ci.focus();
+}
+sb.addEventListener('click',sendChat);
+ci.addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});
+document.querySelectorAll('.sugg').forEach(s=>s.addEventListener('click',()=>{ci.value=s.textContent;sendChat()}));
+</script>
+</body>
+</html>
