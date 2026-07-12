@@ -2,484 +2,619 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UHI Surabaya — Dashboard Penelitian</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GeoAI DSS — Urban Heat Island Surabaya</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
-:root{--navy:#0B1F3A;--red:#7A1E1E;--cream:#F7F4EF;--card:#fff;--border:#e2ddd6;--muted:#6b6560;
-  --zr:#2c7bb6;--zs:#abd9e9;--zt:#fdae61;--zst:#d7191c;--ai:#0B3D2E;--ai-bg:#e8f5f0}
+/* ── DESIGN TOKENS ── */
+:root{
+  /* palette — dark teal professional */
+  --bg:#F0F4F8; --surface:#FFFFFF; --surface2:#F8FAFC; --surface3:#EEF2F7;
+  --accent:#0694A2; --accent2:#1A56DB; --warn:#F59E0B; --danger:#EF4444;
+  --rendah:#3B82F6; --sedang:#10B981; --tinggi:#F59E0B; --st:#EF4444;
+  --text:#111827; --text2:#4B5563; --text3:#9CA3AF;
+  --border:#E5E7EB; --card-glow:0 2px 8px rgba(6,148,162,.15);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;background:var(--cream);color:#1a1a1a;height:100vh;overflow:hidden}
-header{background:var(--navy);color:#fff;padding:10px 18px;display:flex;align-items:center;gap:12px}
-.logo{font-size:1.25rem;font-weight:800}.logo span{color:#fdae61}
-.sub{font-size:.72rem;opacity:.7;margin-top:1px}
-.hbadge{margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);
-  border-radius:20px;padding:3px 11px;font-size:.72rem;display:flex;align-items:center;gap:5px}
-.dot{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:blink 1.5s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.main{display:grid;grid-template-columns:1fr 400px;height:calc(100vh - 50px)}
-/* MAP SIDE */
-.map-side{display:flex;flex-direction:column;overflow:hidden}
-.filter-bar{background:var(--card);border-bottom:1px solid var(--border);padding:7px 12px;
-  display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
-.filter-bar label{font-size:.73rem;font-weight:600;color:var(--navy)}
-.filter-bar select{border:1.5px solid var(--border);border-radius:7px;padding:3px 7px;font-size:.75rem;background:var(--cream)}
-.filter-bar select:focus{border-color:var(--navy);outline:none}
-.fbtn{background:var(--navy);color:#fff;border:none;border-radius:7px;padding:3px 10px;font-size:.73rem;cursor:pointer}
-.fbtn.out{background:transparent;color:var(--navy);border:1.5px solid var(--navy)}
-.fcount{font-size:.7rem;color:var(--muted)}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  height:100vh;overflow:hidden;font-size:14px}
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 20px;height:52px;display:flex;align-items:center;gap:16px;
+  box-shadow:0 1px 20px rgba(0,0,0,.4)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.brand-title{font-size:1rem;font-weight:700;color:#111827}
+.brand-sub{font-size:.65rem;color:#6B7280;margin-top:1px}
+.topbar-stats{display:flex;gap:6px;margin-left:auto}
+.ts{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:4px 11px;text-align:center;cursor:default}
+.ts-n{font-size:.85rem;font-weight:800;color:#0694A2}
+.ts-l{font-size:.6rem;color:#6B7280;margin-top:1px}
+.ts.z-r .ts-n{color:var(--rendah)}
+.ts.z-s .ts-n{color:var(--sedang)}
+.ts.z-t .ts-n{color:var(--tinggi)}
+.ts.z-st .ts-n{color:var(--danger)}
+.ai-pill{display:flex;align-items:center;gap:6px;background:rgba(0,201,177,.1);
+  border:1px solid rgba(0,201,177,.3);border-radius:20px;padding:4px 12px;
+  font-size:.72rem;color:#065F46;font-weight:600;margin-left:8px}
+.ai-dot{width:7px;height:7px;border-radius:50%;background:#10B981;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.2)}}
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 52px)}
+/* ── MAP SIDE ── */
+.map-side{display:flex;flex-direction:column;position:relative}
+/* filter bar */
+.fbar{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:8px 14px;display:flex;gap:8px;align-items:center;flex-shrink:0;z-index:500}
+.fbar select{background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:7px;padding:4px 9px;font-size:.75rem;cursor:pointer}
+.fbar select:focus{outline:none;border-color:var(--accent)}
+.fbtn{background:transparent;color:var(--accent);border:1px solid var(--accent);
+  border-radius:7px;padding:4px 11px;font-size:.73rem;cursor:pointer;transition:.15s}
+.fbtn:hover{background:var(--accent);color:var(--bg)}
+.fc{font-size:.7rem;color:var(--text2)}
+/* map hint */
+.mhint{position:absolute;top:56px;left:50%;transform:translateX(-50%);
+  background:rgba(255,255,255,.95);border:1px solid #D1D5DB;
+  color:var(--text2);padding:5px 14px;border-radius:20px;font-size:.72rem;
+  z-index:999;pointer-events:none;backdrop-filter:blur(8px)}
 #map{flex:1}
-/* RIGHT PANEL */
-.right{display:flex;flex-direction:column;border-left:1px solid var(--border);overflow:hidden}
-.tabs{display:flex;background:var(--card);border-bottom:2px solid var(--border);flex-shrink:0}
-.tab{flex:1;padding:9px 2px;text-align:center;font-size:.73rem;font-weight:600;cursor:pointer;
-  color:var(--muted);border:none;background:none;transition:.15s;white-space:nowrap}
-.tab.active{color:var(--navy);border-bottom:3px solid var(--navy);margin-bottom:-2px}
+/* ── RIGHT PANEL ── */
+.right{background:var(--surface);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+/* tabs */
+.tabs{display:flex;background:#F9FAFB;border-bottom:2px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:10px 4px;text-align:center;font-size:.72rem;font-weight:600;
+  cursor:pointer;color:var(--text3);border:none;background:none;transition:.15s;
+  border-bottom:2px solid transparent;white-space:nowrap}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:#374151;background:#F3F4F6}
+/* panels */
 .panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0}
 .panel.active{display:flex}
-/* ANALISIS */
+/* custom scrollbar */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+/* ── PLACEHOLDER ── */
 .ph{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:8px;color:var(--muted);padding:20px;text-align:center;font-size:.85rem}
-.kcard{padding:13px}
-.khdr{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
-.kname{font-size:1.1rem;font-weight:700;color:var(--navy)}
-.kkec{font-size:.74rem;color:var(--muted);margin-top:1px}
-.zbadge{padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:700;color:#fff;margin-left:auto;white-space:nowrap}
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
-.sb{background:var(--cream);border-radius:7px;padding:9px}
-.sv{font-size:1.15rem;font-weight:800;color:var(--navy)}
-.sl{font-size:.68rem;color:var(--muted);margin-top:1px}
-.bw{margin-bottom:4px}
-.bl{font-size:.69rem;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:2px}
-.br{height:6px;border-radius:3px;background:var(--border);overflow:hidden}
-.bf{height:100%;border-radius:3px;transition:width .6s}
-.rs{margin-top:9px;padding-top:9px;border-top:1px solid var(--border)}
-.rt{font-size:.75rem;font-weight:700;color:var(--navy);margin-bottom:6px}
-.ri{display:flex;gap:6px;margin-bottom:6px;align-items:flex-start;font-size:.78rem}
-.ric{flex-shrink:0;width:17px;height:17px;background:var(--navy);color:#fff;
-  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700}
-.air{margin-top:9px;background:var(--ai-bg);border-left:3px solid var(--ai);
-  border-radius:0 7px 7px 0;padding:9px;font-size:.78rem;line-height:1.5}
-/* SIMULASI */
-.sim-box{margin-top:10px;background:#FFF9E6;border:1.5px solid #F59E0B;border-radius:10px;padding:12px}
-.sim-title{font-size:.78rem;font-weight:700;color:#92400E;margin-bottom:8px;display:flex;align-items:center;gap:5px}
-.slider-row{margin-bottom:8px}
-.slider-label{font-size:.71rem;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:3px}
-input[type=range]{width:100%;accent-color:var(--navy);cursor:pointer}
-.sim-result{background:var(--card);border-radius:8px;padding:10px;margin-top:8px;text-align:center;border:1px solid var(--border)}
-.sim-lst{font-size:1.4rem;font-weight:800;color:var(--navy)}
-.sim-delta{font-size:.78rem;margin-top:2px}
-/* PROYEKSI */
-.proj-panel{padding:13px;display:flex;flex-direction:column;gap:10px}
-.proj-title{font-size:.88rem;font-weight:700;color:var(--navy)}
-.proj-sub{font-size:.7rem;color:var(--muted);margin-top:2px}
-.chart-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px}
-.chart-box canvas{max-height:190px}
-.proj-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
-.pc{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px;text-align:center}
-.pc-v{font-size:.95rem;font-weight:800;color:var(--red)}
-.pc-l{font-size:.63rem;color:var(--muted);margin-top:1px}
-/* HASIL KELURAHAN */
-.kel-proj{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.kp-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px}
-.kp-title{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.kp-val{font-size:1.05rem;font-weight:800;color:var(--navy);margin-bottom:2px}
-.kp-sub{font-size:.69rem;color:var(--muted)}
-.fi-bar{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:.74rem}
-.fi-name{width:90px;color:var(--muted);flex-shrink:0}
-.fi-track{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
-.fi-fill{height:100%;border-radius:4px;background:var(--navy)}
-.fi-val{width:34px;text-align:right;font-weight:700;color:var(--navy)}
-.note-box{background:var(--ai-bg);border-left:3px solid var(--ai);border-radius:0 7px 7px 0;
-  padding:9px;font-size:.76rem;line-height:1.5;margin-top:6px}
-/* CHAT */
-.cwrap{display:flex;flex-direction:column;flex:1;min-height:0}
+  gap:12px;color:var(--text3);padding:24px;text-align:center}
+.ph-icon{font-size:2.5rem;opacity:.4}
+.ph h3{font-size:.95rem;color:#374151;font-weight:600}
+.ph p{font-size:.78rem;line-height:1.6}
+/* ── KELURAHAN CARD ── */
+.kcard{padding:14px;display:flex;flex-direction:column;gap:10px}
+/* header */
+.khdr{display:flex;align-items:flex-start;gap:8px}
+.kname{font-size:1.05rem;font-weight:700;color:var(--text)}
+.kkec{font-size:.72rem;color:var(--text2);margin-top:2px}
+.kright{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.zbadge{padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700;color:#fff}
+.status-pill{font-size:.63rem;font-weight:700;border-radius:10px;padding:2px 8px}
+.sp-safe{background:rgba(16,185,129,.15);color:var(--sedang);border:1px solid rgba(16,185,129,.3)}
+.sp-warn{background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.3)}
+.sp-danger{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+/* stat grid */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.sb{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;padding:10px;transition:.2s}
+.sb:hover{border-color:var(--accent);box-shadow:var(--card-glow)}
+.sv{font-size:1.15rem;font-weight:800;color:var(--text)}
+.sl{font-size:.67rem;color:var(--text2);margin-top:2px}
+/* bars */
+.bars{display:flex;flex-direction:column;gap:5px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:8px;padding:10px}
+.brow{display:flex;align-items:center;gap:7px}
+.brn{font-size:.7rem;color:var(--text2);width:80px;flex-shrink:0}
+.brtrack{flex:1;height:6px;background:#E5E7EB;border-radius:3px;overflow:hidden}
+.brfill{height:100%;border-radius:3px;transition:width .6s}
+.brv{font-size:.68rem;font-weight:700;color:var(--text);width:30px;text-align:right}
+/* rekom */
+.rbox{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px}
+.rbox-title{font-size:.72rem;font-weight:700;color:#065F46;margin-bottom:7px;display:flex;align-items:center;gap:5px}
+.ritem{display:flex;gap:7px;margin-bottom:6px;align-items:flex-start;font-size:.76rem;color:var(--text2)}
+.ric{width:17px;height:17px;background:#0694A2;color:#FFFFFF;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;flex-shrink:0}
+/* AI box */
+.aibox{background:linear-gradient(135deg,rgba(0,201,177,.06),rgba(0,152,255,.06));
+  border:1px solid rgba(0,201,177,.2);border-radius:8px;padding:11px}
+.aibox-hdr{font-size:.7rem;font-weight:700;color:#065F46;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.aibox p{font-size:.78rem;color:#374151;line-height:1.6}
+/* sim box */
+.simbox{background:#FFFBEB;border:1px solid #FCD34D;
+  border-radius:8px;padding:11px}
+.simbox-hdr{font-size:.72rem;font-weight:700;color:var(--warn);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.slrow{margin-bottom:7px}
+.sllbl{font-size:.69rem;color:var(--text2);display:flex;justify-content:space-between;margin-bottom:3px}
+input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;height:4px}
+.simresult{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:7px;
+  padding:10px;text-align:center;margin-top:6px}
+.simlst{font-size:1.3rem;font-weight:800;color:#111827}
+.simdelta{font-size:.75rem;margin-top:2px}
+.simnote{font-size:.63rem;color:#9CA3AF;margin-top:4px}
+/* proj btn */
+.projbtn{background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:var(--bg);border:none;border-radius:8px;padding:8px 16px;
+  font-size:.76rem;font-weight:700;cursor:pointer;width:100%;transition:.15s}
+.projbtn:hover{opacity:.9;transform:translateY(-1px)}
+/* ── PROYEKSI PANEL ── */
+.proj-wrap{padding:13px;display:flex;flex-direction:column;gap:10px}
+.section-hdr{font-size:.78rem;font-weight:700;color:#0694A2;
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;
+  display:flex;align-items:center;gap:5px}
+.cbox{background:#FFFFFF;border:1px solid #E5E7EB;
+  border-radius:8px;padding:11px}
+.cbox canvas{max-height:180px}
+.pcards{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.pc{background:#F0F9FF;border:1px solid #BAE6FD;
+  border-radius:7px;padding:8px;text-align:center}
+.pc-v{font-size:.88rem;font-weight:800;color:var(--danger)}
+.pc-l{font-size:.6rem;color:var(--text2);margin-top:1px}
+/* kel proj */
+.kp-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.kp{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;padding:10px}
+.kp-t{font-size:.65rem;color:#9CA3AF;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.kp-v{font-size:1rem;font-weight:700;color:#111827;margin-bottom:2px}
+.kp-s{font-size:.68rem;color:#6B7280}
+.fi-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.fi-nm{width:88px;font-size:.7rem;color:var(--text2);flex-shrink:0}
+.fi-tr{flex:1;height:7px;background:#E5E7EB;border-radius:3px;overflow:hidden}
+.fi-fl{height:100%;border-radius:3px;background:linear-gradient(90deg,#0694A2,#1A56DB);transition:width .8s}
+.fi-v{font-size:.68rem;font-weight:700;color:#0694A2;width:32px;text-align:right}
+.note{background:#F0FDFA;border:1px solid #99F6E4;
+  border-radius:7px;padding:9px;font-size:.72rem;color:var(--text2);line-height:1.5}
+/* ── SPATIAL AI PANEL ── */
+.ai-wrap{display:flex;flex-direction:column;flex:1;min-height:0;background:#FAFAFA}
+.ai-intro{padding:10px 12px;background:#F0FDFA;border-bottom:1px solid var(--border);flex-shrink:0}
+.ai-intro-t{font-size:.78rem;font-weight:700;color:#065F46}
+.ai-intro-s{font-size:.68rem;color:#6B7280;margin-top:2px}
 .cmsgs{flex:1;overflow-y:auto;padding:11px;display:flex;flex-direction:column;gap:8px}
-.msg{max-width:90%;padding:8px 11px;border-radius:12px;font-size:.81rem;line-height:1.55}
-.msg.user{background:var(--navy);color:#fff;align-self:flex-end;border-radius:12px 12px 4px 12px}
-.msg.ai{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-radius:12px 12px 12px 4px}
-.sndr{font-size:.67rem;font-weight:700;color:var(--ai);margin-bottom:2px}
-.dots{display:flex;gap:4px;padding:2px 0}
-.dots span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:dp 1.2s ease-in-out infinite}
-.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
-@keyframes dp{0%,80%,100%{transform:scale(1);opacity:.5}40%{transform:scale(1.3);opacity:1}}
-.cinput{padding:8px 10px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0}
-.suggs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
-.sugg{font-size:.7rem;background:var(--cream);border:1px solid var(--border);
-  border-radius:12px;padding:2px 8px;cursor:pointer;color:var(--navy);transition:.15s}
-.sugg:hover{background:var(--navy);color:#fff}
-.crow{display:flex;gap:5px}
-#ci{flex:1;border:1.5px solid var(--border);border-radius:17px;padding:6px 12px;font-size:.81rem;outline:none;background:var(--cream)}
-#ci:focus{border-color:var(--navy)}
-#sb{background:var(--navy);color:#fff;border:none;border-radius:17px;padding:6px 13px;font-size:.79rem;cursor:pointer;font-weight:600}
-#sb:disabled{opacity:.5;cursor:not-allowed}
-/* INFO */
-.isec{padding:13px}
-.isec h3{font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:8px}
-.zlist{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
-.zi{display:flex;align-items:center;gap:8px}
-.zdot{width:11px;height:11px;border-radius:2px;flex-shrink:0}
-.zd{font-size:.77rem}
-.ss{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.ssb{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px;text-align:center}
-.ssn{font-size:1rem;font-weight:800;color:var(--red)}
-.ssl{font-size:.65rem;color:var(--muted);margin-top:1px}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.msg{max-width:92%;padding:8px 11px;border-radius:11px;font-size:.79rem;line-height:1.58}
+.msg.user{background:linear-gradient(135deg,rgba(0,201,177,.2),rgba(0,152,255,.2));
+  border:1px solid rgba(0,201,177,.2);color:var(--text);align-self:flex-end;
+  border-radius:11px 11px 3px 11px}
+.msg.ai{background:var(--surface2);border:1px solid var(--border);
+  color:var(--text2);align-self:flex-start;border-radius:11px 11px 11px 3px}
+.sndr{font-size:.65rem;font-weight:700;color:#0694A2;margin-bottom:3px}
+.dots{display:flex;gap:4px;padding:3px 0}
+.dots span{width:6px;height:6px;border-radius:50%;background:var(--accent);
+  animation:dp 1.4s ease-in-out infinite;opacity:.4}
+.dots span:nth-child(2){animation-delay:.2s}
+.dots span:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,80%,100%{opacity:.4;transform:scale(1)}40%{opacity:1;transform:scale(1.3)}}
+.cinput{padding:9px 10px;border-top:1px solid var(--border);background:#F9FAFB;flex-shrink:0}
+.suggs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
+.sugg{font-size:.68rem;background:var(--surface2);border:1px solid var(--border);
+  border-radius:11px;padding:3px 8px;cursor:pointer;color:var(--text2);transition:.15s}
+.sugg:hover{background:#0694A2;color:#FFFFFF;border-color:#0694A2}
+.crow{display:flex;gap:6px}
+#ci{flex:1;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:18px;padding:7px 13px;font-size:.79rem;outline:none}
+#ci::placeholder{color:#9CA3AF}
+#ci:focus{border-color:var(--accent)}
+#sb{background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:var(--bg);border:none;border-radius:18px;padding:7px 15px;
+  font-size:.78rem;cursor:pointer;font-weight:700;transition:.15s}
+#sb:disabled{opacity:.4;cursor:not-allowed}
+/* ── INFO ── */
+.info-wrap{padding:13px;display:flex;flex-direction:column;gap:10px}
+.zcard{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;padding:10px}
+.zi{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.zdot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.zd-title{font-size:.78rem;font-weight:600;color:#111827}
+.zd-sub{font-size:.67rem;color:#6B7280}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.kpi{background:#F0F9FF;border:1px solid #BAE6FD;border-radius:7px;padding:9px;text-align:center}
+.kpi-v{font-size:.95rem;font-weight:800;color:#0694A2}
+.kpi-l{font-size:.63rem;color:#6B7280;margin-top:1px}
+/* Leaflet dark */
+.leaflet-container{background:#F0F4F8!important}
+.leaflet-tile-pane{filter:saturate(.9) brightness(.97)}
+.leaflet-popup-content-wrapper{background:#FFFFFF!important;border:1px solid #E5E7EB!important;color:#111827!important;border-radius:10px!important;box-shadow:0 4px 20px rgba(0,0,0,.5)!important}
+.leaflet-popup-tip{background:#FFFFFF!important}
+.leaflet-popup-content{color:#111827!important;font-family:'Segoe UI',sans-serif!important;font-size:12px!important;margin:8px 12px!important}
 </style>
 </head>
 <body>
-<header>
-  <div><div class="logo">UHI <span>Surabaya</span></div><div class="sub">Dashboard Penelitian — Klimatologi STMKG 2026</div></div>
-  <div class="hbadge"><div class="dot"></div>AI Aktif</div>
-</header>
-<div class="main">
-  <!-- PETA -->
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">🌡️</div>
+    <div>
+      <div class="brand-title">GeoAI DSS — Urban Heat Island</div>
+      <div class="brand-sub">Kota Surabaya · 154 Kelurahan · Klimatologi STMKG 2026</div>
+    </div>
+  </div>
+  <div class="topbar-stats">
+    <div class="ts"><div class="ts-n" id="ts-total">162</div><div class="ts-l">Total Kel.</div></div>
+    <div class="ts z-st"><div class="ts-n">45</div><div class="ts-l">Inti UHI</div></div>
+    <div class="ts z-t"><div class="ts-n">71</div><div class="ts-l">Tinggi</div></div>
+    <div class="ts z-s"><div class="ts-n">34</div><div class="ts-l">Sedang</div></div>
+    <div class="ts z-r"><div class="ts-n">12</div><div class="ts-l">Rendah</div></div>
+  </div>
+  <div class="ai-pill"><div class="ai-dot"></div>GeoAI Ready</div>
+</div>
+
+<div class="layout">
+  <!-- MAP SIDE -->
   <div class="map-side">
-    <div class="filter-bar">
-      <label>🔍</label>
+    <div class="fbar">
+      <span style="font-size:.72rem;color:var(--text2)">🔍 Filter:</span>
       <select id="f-zona" onchange="applyFilter()">
         <option value="">Semua Zona</option>
         <option value="Rendah">Rendah</option>
         <option value="Sedang">Sedang</option>
         <option value="Tinggi">Tinggi</option>
-        <option value="Sangat Tinggi">Sangat Tinggi (Inti UHI)</option>
+        <option value="Sangat Tinggi">Inti UHI (Sangat Tinggi)</option>
       </select>
-      <select id="f-kec" onchange="applyFilter()"></select>
-      <button class="fbtn out" onclick="resetFilter()">Reset</button>
-      <span class="fcount" id="fcount"></span>
+      <select id="f-kec" onchange="applyFilter()">
+        <option value="">Semua Kecamatan</option>
+      </select>
+      <button class="fbtn" onclick="resetFilter()">Reset</button>
+      <span class="fc" id="fcount"></span>
     </div>
+    <div class="mhint" id="mhint">🖱 Klik kelurahan untuk analisis spasial</div>
     <div id="map"></div>
   </div>
-  <!-- PANEL KANAN -->
+
+  <!-- RIGHT PANEL -->
   <div class="right">
     <div class="tabs">
-      <button class="tab active" data-tab="analisis">📊 Analisis</button>
+      <button class="tab active" data-tab="analysis">🗺 Analisis</button>
       <button class="tab" data-tab="proj">📈 Proyeksi</button>
-      <button class="tab" data-tab="chat">🤖 AI</button>
-      <button class="tab" data-tab="info">ℹ️</button>
+      <button class="tab" data-tab="spatial-ai">🤖 Spatial AI</button>
+      <button class="tab" data-tab="info">📊 Info</button>
     </div>
-    <!-- ANALISIS -->
-    <div id="panel-analisis" class="panel active">
+
+    <!-- ANALYSIS PANEL -->
+    <div id="panel-analysis" class="panel active">
       <div class="ph" id="ph">
-        <span style="font-size:2rem">📍</span>
-        <p><b>Klik kelurahan</b> di peta untuk<br>analisis termal, proyeksi &amp; simulasi</p>
+        <div class="ph-icon">🗺</div>
+        <h3>Spatial Analysis Ready</h3>
+        <p>Klik kelurahan di peta untuk memulai<br>analisis termal, identifikasi faktor,<br>dan simulasi mitigasi.</p>
       </div>
-      <div id="detail" style="display:none"></div>
+      <div id="kdetail" style="display:none"></div>
     </div>
-    <!-- PROYEKSI -->
+
+    <!-- PROYEKSI PANEL -->
     <div id="panel-proj" class="panel">
-      <div class="proj-panel" id="proj-content">
-        <!-- diisi JS -->
+      <div class="proj-wrap" id="proj-content">
+        <div class="ph" style="padding:40px"><div class="ph-icon">📈</div><p>Klik kelurahan → "Lihat Proyeksi"<br>untuk analisis per kelurahan.<br>Atau scroll ke bawah untuk tren kota.</p></div>
       </div>
     </div>
-    <!-- CHAT -->
-    <div id="panel-chat" class="panel">
-      <div class="cwrap">
+
+    <!-- SPATIAL AI PANEL -->
+    <div id="panel-spatial-ai" class="panel">
+      <div class="ai-wrap">
+        <div class="ai-intro">
+          <div class="ai-intro-t">🤖 Spatial AI Assistant</div>
+          <div class="ai-intro-s">Berbasis dataset penelitian 162 kelurahan — bukan internet</div>
+        </div>
         <div class="cmsgs" id="cmsgs">
-          <div class="msg ai"><div class="sndr">🤖 Asisten UHI</div>Halo! Klik kelurahan di peta lalu tanya "proyeksi Ngagel 2029?" atau nama kelurahan apapun untuk analisis mendalam. 🗺️</div>
+          <div class="msg ai">
+            <div class="sndr">🤖 GeoAI Spatial Assistant</div>
+            Selamat datang di <strong>Spatial AI Assistant</strong>.<br><br>
+            Saya menjawab berdasarkan dataset penelitian UHI Surabaya (Cevin Abinaya Malewa, STMKG 2026) — 162 kelurahan, hasil K-Means, Random Forest, dan LSTM.<br><br>
+            Tanyakan kelurahan spesifik, faktor penyebab, atau strategi mitigasi. 🗺
+          </div>
         </div>
         <div class="cinput">
           <div class="suggs">
+            <span class="sugg">Mengapa Ngagel panas?</span>
             <span class="sugg">Kelurahan terpanas?</span>
-            <span class="sugg">Kenapa Perak Barat panas?</span>
-            <span class="sugg">Zona Sangat Tinggi?</span>
-            <span class="sugg">Proyeksi suhu 2029?</span>
-            <span class="sugg">Rekomendasi mitigasi?</span>
+            <span class="sugg">Faktor dominan UHI?</span>
+            <span class="sugg">Proyeksi 2029?</span>
+            <span class="sugg">Mitigasi zona Inti UHI?</span>
           </div>
           <div class="crow">
-            <input id="ci" type="text" placeholder="Tanya tentang UHI Surabaya...">
+            <input id="ci" type="text" placeholder="Tanya tentang spasial UHI Surabaya...">
             <button id="sb">Kirim</button>
           </div>
         </div>
       </div>
     </div>
-    <!-- INFO -->
+
+    <!-- INFO PANEL -->
     <div id="panel-info" class="panel">
-      <div class="isec">
-        <h3>Zona Intensitas UHI</h3>
-        <div class="zlist">
-          <div class="zi"><div class="zdot" style="background:#2c7bb6"></div><div class="zd"><b>Rendah</b> — 13 kel | 36,99°C</div></div>
-          <div class="zi"><div class="zdot" style="background:#abd9e9"></div><div class="zd"><b>Sedang</b> — 34 kel | 40,20°C</div></div>
-          <div class="zi"><div class="zdot" style="background:#fdae61"></div><div class="zd"><b>Tinggi</b> — 71 kel | 42,25°C</div></div>
-          <div class="zi"><div class="zdot" style="background:#d7191c"></div><div class="zd"><b>Sangat Tinggi (Inti UHI)</b> — 45 kel | 42,54°C</div></div>
+      <div class="info-wrap">
+        <div class="section-hdr">📊 Sistem GeoAI DSS</div>
+        <div class="zcard">
+          <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:8px">5 Modul Platform</div>
+          <div style="display:flex;flex-direction:column;gap:5px;font-size:.74rem;color:var(--text2)">
+            <div>① <strong style="color:var(--accent)">Spatial Analysis</strong> — Ekstraksi LST, NDVI, NDBI, NDWI via GEE</div>
+            <div>② <strong style="color:var(--accent)">UHI Zoning</strong> — K-Means clustering 4 zona (Silhouette 0,374)</div>
+            <div>③ <strong style="color:var(--accent)">AI Interpretation</strong> — Random Forest feature importance + korelasi</div>
+            <div>④ <strong style="color:var(--accent)">Future Projection</strong> — LSTM tren suhu 2025–2029 (MAE 0,61°C)</div>
+            <div>⑤ <strong style="color:var(--accent)">Mitigation Simulation</strong> — Estimasi dampak intervensi vegetasi</div>
+          </div>
         </div>
-        <h3>Metrik Model</h3>
-        <div class="ss">
-          <div class="ssb"><div class="ssn">0,374</div><div class="ssl">Silhouette K-Means</div></div>
-          <div class="ssb"><div class="ssn">87,9%</div><div class="ssl">Akurasi RF (internal)</div></div>
-          <div class="ssb"><div class="ssn">0,61°C</div><div class="ssl">MAE LSTM</div></div>
-          <div class="ssb"><div class="ssn">0,233</div><div class="ssl">R² LSTM</div></div>
-          <div class="ssb"><div class="ssn">+0,906</div><div class="ssl">Korelasi NDBI↔LST</div></div>
-          <div class="ssb"><div class="ssn">−0,575</div><div class="ssl">Korelasi NDVI↔LST</div></div>
+        <div class="section-hdr">🎯 Zona Intensitas UHI</div>
+        <div class="zcard">
+          <div class="zi"><div class="zdot" style="background:var(--danger)"></div><div><div class="zd-title">Sangat Tinggi (Inti UHI)</div><div class="zd-sub">45 kel · LST 42,54°C · kepadatan 23.236 jiwa/km²</div></div></div>
+          <div class="zi"><div class="zdot" style="background:var(--tinggi)"></div><div><div class="zd-title">Tinggi</div><div class="zd-sub">71 kel · LST 42,25°C · terbangun 96%</div></div></div>
+          <div class="zi"><div class="zdot" style="background:var(--sedang)"></div><div><div class="zd-title">Sedang</div><div class="zd-sub">34 kel · LST 40,20°C · zona transisi</div></div></div>
+          <div class="zi" style="margin:0"><div class="zdot" style="background:var(--rendah)"></div><div><div class="zd-title">Rendah</div><div class="zd-sub">12 kel · LST 36,99°C · vegetasi baik</div></div></div>
         </div>
-        <div style="margin-top:10px;font-size:.72rem;color:var(--muted);line-height:1.6">
-          Data: Landsat 8/9 + Dynamic World (GEE, 2022–2024), BMKG Tanjung Perak (2009–2023), BIG RBI 1:10.000<br>
-          <b>Cevin Abinaya Malewa</b> — Klimatologi STMKG, 2026
+        <div class="section-hdr">⚡ Feature Importance (Random Forest)</div>
+        <div class="zcard" id="fi-panel"></div>
+        <div class="section-hdr">📋 KPI Penelitian</div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-v">+0,906</div><div class="kpi-l">Korelasi NDBI↔LST</div></div>
+          <div class="kpi"><div class="kpi-v">−0,575</div><div class="kpi-l">Korelasi NDVI↔LST</div></div>
+          <div class="kpi"><div class="kpi-v">0,374</div><div class="kpi-l">Silhouette K-Means</div></div>
+          <div class="kpi"><div class="kpi-v">87,9%</div><div class="kpi-l">Akurasi RF (internal)</div></div>
+          <div class="kpi"><div class="kpi-v">0,61°C</div><div class="kpi-l">MAE LSTM</div></div>
+          <div class="kpi"><div class="kpi-v">+0,16°C</div><div class="kpi-l">Proyeksi kenaikan 2029</div></div>
+        </div>
+        <div style="font-size:.68rem;color:var(--text3);line-height:1.6;padding:4px 0">
+          Data: Landsat 8/9 (GEE, 2022–2024) · Dynamic World V1 · BMKG Tanjung Perak (2009–2023) · BIG RBI 1:10.000<br>
+          <a href="https://github.com/oikochi/uhi-ai-cevin" target="_blank" style="color:var(--accent)">github.com/oikochi/uhi-ai-cevin</a>
         </div>
       </div>
     </div>
   </div>
 </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
 const RD={"kel_kb":{"asemrowo":{"nm":"Asemrowo","kc":"Asemrowo","zona":"Tinggi","lst":43.7,"ndvi":0.195,"ndbi":0.02,"ndwi":-0.23,"fraksi":0.901,"kpd":3191,"lst_std":2.291,"ndvi_std":0.134},"genting":{"nm":"Genting","kc":"Asemrowo","zona":"Tinggi","lst":42.3,"ndvi":0.191,"ndbi":0.018,"ndwi":-0.217,"fraksi":0.903,"kpd":3191,"lst_std":2.043,"ndvi_std":0.139},"greges":{"nm":"Greges","kc":"Asemrowo","zona":"Tinggi","lst":43.38,"ndvi":0.15,"ndbi":0.041,"ndwi":-0.172,"fraksi":0.907,"kpd":3191,"lst_std":2.776,"ndvi_std":0.142},"kalianak":{"nm":"Kalianak","kc":"Asemrowo","zona":"Tinggi","lst":41.7,"ndvi":0.166,"ndbi":-0.078,"ndwi":-0.168,"fraksi":0.751,"kpd":3191,"lst_std":4.431,"ndvi_std":0.158},"tambaklangon":{"nm":"Tambak Langon","kc":"Asemrowo","zona":"Sedang","lst":41.27,"ndvi":0.238,"ndbi":-0.036,"ndwi":-0.251,"fraksi":0.567,"kpd":3191,"lst_std":3.045,"ndvi_std":0.154},"kandangan":{"nm":"Kandangan","kc":"Benowo","zona":"Rendah","lst":37.32,"ndvi":0.328,"ndbi":-0.158,"ndwi":-0.315,"fraksi":0.363,"kpd":2752,"lst_std":3.038,"ndvi_std":0.157},"klakahrejo":{"nm":"Klakahrejo","kc":"Benowo","zona":"Sedang","lst":39.87,"ndvi":0.343,"ndbi":-0.069,"ndwi":-0.349,"fraksi":0.856,"kpd":2752,"lst_std":2.643,"ndvi_std":0.169},"romokalisari":{"nm":"Romokalisari","kc":"Benowo","zona":"Rendah","lst":38.21,"ndvi":0.223,"ndbi":-0.169,"ndwi":-0.216,"fraksi":0.331,"kpd":2752,"lst_std":3.32,"ndvi_std":0.148},"sememi":{"nm":"Sememi","kc":"Benowo","zona":"Sedang","lst":39.48,"ndvi":0.313,"ndbi":-0.093,"ndwi":-0.321,"fraksi":0.688,"kpd":2752,"lst_std":2.118,"ndvi_std":0.129},"tambakosowilangon":{"nm":"Tambak Oso Wilangon","kc":"Benowo","zona":"Rendah","lst":38.41,"ndvi":0.252,"ndbi":-0.175,"ndwi":-0.234,"fraksi":0.26,"kpd":2752,"lst_std":3.746,"ndvi_std":0.157},"alonaloncontong":{"nm":"Alon-alon Contong","kc":"Bubutan","zona":"Sangat Tinggi","lst":41.67,"ndvi":0.226,"ndbi":0.012,"ndwi":-0.272,"fraksi":1.0,"kpd":25006,"lst_std":0.844,"ndvi_std":0.128},"bubutan":{"nm":"Bubutan","kc":"Bubutan","zona":"Sangat Tinggi","lst":42.07,"ndvi":0.206,"ndbi":0.056,"ndwi":-0.259,"fraksi":1.0,"kpd":25006,"lst_std":0.888,"ndvi_std":0.116},"gundih":{"nm":"Gundih","kc":"Bubutan","zona":"Sangat Tinggi","lst":42.29,"ndvi":0.17,"ndbi":0.08,"ndwi":-0.221,"fraksi":1.0,"kpd":25006,"lst_std":1.353,"ndvi_std":0.104},"jepara":{"nm":"Jepara","kc":"Bubutan","zona":"Sangat Tinggi","lst":42.87,"ndvi":0.183,"ndbi":0.081,"ndwi":-0.248,"fraksi":0.996,"kpd":25006,"lst_std":0.926,"ndvi_std":0.123},"tembokdukuh":{"nm":"Tembok Dukuh","kc":"Bubutan","zona":"Sangat Tinggi","lst":42.56,"ndvi":0.233,"ndbi":0.038,"ndwi":-0.281,"fraksi":0.995,"kpd":25006,"lst_std":1.465,"ndvi_std":0.161},"bulak":{"nm":"Bulak","kc":"Bulak","zona":"Tinggi","lst":40.61,"ndvi":0.26,"ndbi":0.005,"ndwi":-0.284,"fraksi":0.912,"kpd":7545,"lst_std":1.652,"ndvi_std":0.166},"kedungcowek":{"nm":"Kedung Cowek","kc":"Bulak","zona":"Sedang","lst":38.96,"ndvi":0.317,"ndbi":-0.067,"ndwi":-0.324,"fraksi":0.762,"kpd":7545,"lst_std":2.135,"ndvi_std":0.185},"kenjeran":{"nm":"Kenjeran","kc":"Bulak","zona":"Sedang","lst":39.35,"ndvi":0.298,"ndbi":-0.116,"ndwi":-0.308,"fraksi":0.801,"kpd":7545,"lst_std":2.22,"ndvi_std":0.187},"komplekkenjeran":{"nm":"Komplek Kenjeran","kc":"Bulak","zona":"Rendah","lst":38.24,"ndvi":0.42,"ndbi":-0.141,"ndwi":-0.421,"fraksi":0.494,"kpd":7545,"lst_std":2.501,"ndvi_std":0.131},"sukolilo":{"nm":"Sukolilo","kc":"Bulak","zona":"Sedang","lst":38.3,"ndvi":0.483,"ndbi":-0.16,"ndwi":-0.454,"fraksi":0.624,"kpd":7545,"lst_std":1.968,"ndvi_std":0.236},"dukuhkupang":{"nm":"Dukuh Kupang","kc":"Dukuh Pakis","zona":"Tinggi","lst":42.86,"ndvi":0.221,"ndbi":0.03,"ndwi":-0.282,"fraksi":1.0,"kpd":5802,"lst_std":0.85,"ndvi_std":0.097},"dukuhpakis":{"nm":"Dukuh Pakis","kc":"Dukuh Pakis","zona":"Sedang","lst":40.2,"ndvi":0.407,"ndbi":-0.057,"ndwi":-0.422,"fraksi":0.701,"kpd":5802,"lst_std":2.264,"ndvi_std":0.171},"gunungsari":{"nm":"Gunungsari","kc":"Dukuh Pakis","zona":"Sedang","lst":40.57,"ndvi":0.415,"ndbi":-0.05,"ndwi":-0.435,"fraksi":0.678,"kpd":5802,"lst_std":1.785,"ndvi_std":0.175},"pradahkalikendal":{"nm":"Pradahkali Kendal","kc":"Dukuh Pakis","zona":"Sedang","lst":40.64,"ndvi":0.407,"ndbi":-0.086,"ndwi":-0.423,"fraksi":0.84,"kpd":5802,"lst_std":1.676,"ndvi_std":0.169},"dukuhmenanggal":{"nm":"Dukuh Menanggal","kc":"Gayungan","zona":"Tinggi","lst":42.49,"ndvi":0.348,"ndbi":-0.052,"ndwi":-0.379,"fraksi":0.952,"kpd":7470,"lst_std":1.369,"ndvi_std":0.157},"gayungan":{"nm":"Gayungan","kc":"Gayungan","zona":"Tinggi","lst":41.87,"ndvi":0.31,"ndbi":-0.036,"ndwi":-0.353,"fraksi":0.946,"kpd":7470,"lst_std":1.621,"ndvi_std":0.159},"ketintang":{"nm":"Ketintang","kc":"Gayungan","zona":"Tinggi","lst":41.63,"ndvi":0.32,"ndbi":-0.03,"ndwi":-0.362,"fraksi":0.999,"kpd":7470,"lst_std":1.061,"ndvi_std":0.143},"menanggal":{"nm":"Menanggal","kc":"Gayungan","zona":"Tinggi","lst":42.14,"ndvi":0.288,"ndbi":-0.005,"ndwi":-0.329,"fraksi":0.997,"kpd":7470,"lst_std":1.077,"ndvi_std":0.145},"embongkaliasin":{"nm":"Embong Kaliasin","kc":"Genteng","zona":"Tinggi","lst":41.43,"ndvi":0.264,"ndbi":-0.017,"ndwi":-0.3,"fraksi":0.996,"kpd":14468,"lst_std":1.461,"ndvi_std":0.134},"genteng":{"nm":"Genteng","kc":"Genteng","zona":"Tinggi","lst":42.47,"ndvi":0.216,"ndbi":0.032,"ndwi":-0.269,"fraksi":0.995,"kpd":14468,"lst_std":1.454,"ndvi_std":0.128},"kapasari":{"nm":"Kapasari","kc":"Genteng","zona":"Sangat Tinggi","lst":42.3,"ndvi":0.16,"ndbi":0.084,"ndwi":-0.228,"fraksi":1.0,"kpd":14468,"lst_std":0.625,"ndvi_std":0.088},"ketabang":{"nm":"Ketabang","kc":"Genteng","zona":"Tinggi","lst":41.44,"ndvi":0.278,"ndbi":-0.03,"ndwi":-0.328,"fraksi":0.992,"kpd":14468,"lst_std":1.027,"ndvi_std":0.14},"peneleh":{"nm":"Peneleh","kc":"Genteng","zona":"Tinggi","lst":42.36,"ndvi":0.201,"ndbi":0.056,"ndwi":-0.269,"fraksi":1.0,"kpd":14468,"lst_std":0.92,"ndvi_std":0.111},"airlangga":{"nm":"Airlangga","kc":"Gubeng","zona":"Sangat Tinggi","lst":41.98,"ndvi":0.202,"ndbi":0.059,"ndwi":-0.28,"fraksi":1.0,"kpd":16937,"lst_std":0.816,"ndvi_std":0.103},"baratajaya":{"nm":"Baratajaya","kc":"Gubeng","zona":"Tinggi","lst":41.94,"ndvi":0.224,"ndbi":0.026,"ndwi":-0.284,"fraksi":0.97,"kpd":16937,"lst_std":1.224,"ndvi_std":0.141},"gubeng":{"nm":"Gubeng","kc":"Gubeng","zona":"Tinggi","lst":41.6,"ndvi":0.253,"ndbi":0.009,"ndwi":-0.306,"fraksi":0.999,"kpd":16937,"lst_std":1.327,"ndvi_std":0.124},"kertajaya":{"nm":"Kertajaya","kc":"Gubeng","zona":"Sangat Tinggi","lst":42.38,"ndvi":0.191,"ndbi":0.072,"ndwi":-0.266,"fraksi":1.0,"kpd":16937,"lst_std":0.765,"ndvi_std":0.092},"mojo":{"nm":"Mojo","kc":"Gubeng","zona":"Sangat Tinggi","lst":42.39,"ndvi":0.211,"ndbi":0.043,"ndwi":-0.279,"fraksi":1.0,"kpd":16937,"lst_std":0.744,"ndvi_std":0.101},"pucangsewu":{"nm":"Pucang Sewu","kc":"Gubeng","zona":"Sangat Tinggi","lst":42.64,"ndvi":0.219,"ndbi":0.033,"ndwi":-0.293,"fraksi":1.0,"kpd":16937,"lst_std":0.699,"ndvi_std":0.116},"gununganyar":{"nm":"Gununganyar","kc":"Gunung Anyar","zona":"Sedang","lst":40.68,"ndvi":0.375,"ndbi":-0.087,"ndwi":-0.387,"fraksi":0.87,"kpd":6066,"lst_std":1.928,"ndvi_std":0.172},"gununganyartambak":{"nm":"Gununganyartambak","kc":"Gunung Anyar","zona":"Rendah","lst":36.71,"ndvi":0.378,"ndbi":-0.246,"ndwi":-0.335,"fraksi":0.471,"kpd":6066,"lst_std":3.709,"ndvi_std":0.2},"rungkutmenanggal":{"nm":"Rungkut Menanggal","kc":"Gunung Anyar","zona":"Tinggi","lst":43.24,"ndvi":0.252,"ndbi":0.029,"ndwi":-0.29,"fraksi":0.999,"kpd":6066,"lst_std":1.372,"ndvi_std":0.142},"rungkuttengah":{"nm":"Rungkut Tengah","kc":"Gunung Anyar","zona":"Tinggi","lst":43.19,"ndvi":0.207,"ndbi":0.038,"ndwi":-0.24,"fraksi":0.952,"kpd":6066,"lst_std":2.179,"ndvi_std":0.127},"jambangan":{"nm":"Jambangan","kc":"Jambangan","zona":"Tinggi","lst":41.49,"ndvi":0.279,"ndbi":-0.014,"ndwi":-0.326,"fraksi":0.996,"kpd":13220,"lst_std":0.952,"ndvi_std":0.127},"karah":{"nm":"Karah","kc":"Jambangan","zona":"Tinggi","lst":41.28,"ndvi":0.284,"ndbi":-0.022,"ndwi":-0.325,"fraksi":0.945,"kpd":13220,"lst_std":1.449,"ndvi_std":0.16},"kebonsari":{"nm":"Kebonsari","kc":"Jambangan","zona":"Tinggi","lst":41.59,"ndvi":0.321,"ndbi":-0.03,"ndwi":-0.358,"fraksi":0.995,"kpd":13220,"lst_std":1.357,"ndvi_std":0.151},"pagesangan":{"nm":"Pagesangan","kc":"Jambangan","zona":"Tinggi","lst":42.55,"ndvi":0.286,"ndbi":-0.009,"ndwi":-0.325,"fraksi":0.998,"kpd":13220,"lst_std":1.207,"ndvi_std":0.13},"karangpilang":{"nm":"Karang Pilang","kc":"Karang Pilang","zona":"Tinggi","lst":42.38,"ndvi":0.322,"ndbi":-0.039,"ndwi":-0.352,"fraksi":0.878,"kpd":8048,"lst_std":1.787,"ndvi_std":0.167},"kebraon":{"nm":"Kebraon","kc":"Karang Pilang","zona":"Tinggi","lst":42.19,"ndvi":0.311,"ndbi":-0.02,"ndwi":-0.344,"fraksi":0.946,"kpd":8048,"lst_std":1.91,"ndvi_std":0.159},"kedurus":{"nm":"Kedurus","kc":"Karang Pilang","zona":"Tinggi","lst":41.19,"ndvi":0.296,"ndbi":-0.016,"ndwi":-0.325,"fraksi":0.891,"kpd":8048,"lst_std":1.899,"ndvi_std":0.173},"warugunung":{"nm":"Warugunung","kc":"Karang Pilang","zona":"Sedang","lst":41.49,"ndvi":0.379,"ndbi":-0.044,"ndwi":-0.396,"fraksi":0.61,"kpd":8048,"lst_std":2.452,"ndvi_std":0.182},"bulakbanteng":{"nm":"Bulak Banteng","kc":"Kenjeran","zona":"Rendah","lst":37.64,"ndvi":0.175,"ndbi":-0.146,"ndwi":-0.166,"fraksi":0.429,"kpd":21304,"lst_std":4.201,"ndvi_std":0.222},"sidotopowetan":{"nm":"Sidotopo Wetan","kc":"Kenjeran","zona":"Sangat Tinggi","lst":42.47,"ndvi":0.151,"ndbi":0.099,"ndwi":-0.215,"fraksi":1.0,"kpd":21304,"lst_std":0.81,"ndvi_std":0.082},"tambakwedi":{"nm":"Tambak Wedi","kc":"Kenjeran","zona":"Tinggi","lst":40.61,"ndvi":0.276,"ndbi":-0.043,"ndwi":-0.291,"fraksi":0.862,"kpd":21304,"lst_std":2.52,"ndvi_std":0.179},"tanahkalikedinding":{"nm":"Tanah Kali Kedinding","kc":"Kenjeran","zona":"Sangat Tinggi","lst":41.32,"ndvi":0.197,"ndbi":0.055,"ndwi":-0.235,"fraksi":1.0,"kpd":21304,"lst_std":1.28,"ndvi_std":0.116},"dupak":{"nm":"Dupak","kc":"Krembangan","zona":"Sangat Tinggi","lst":42.89,"ndvi":0.163,"ndbi":0.074,"ndwi":-0.222,"fraksi":0.986,"kpd":13409,"lst_std":1.481,"ndvi_std":0.064},"kemayoran":{"nm":"Kemayoran","kc":"Krembangan","zona":"Sangat Tinggi","lst":42.55,"ndvi":0.163,"ndbi":0.074,"ndwi":-0.233,"fraksi":1.0,"kpd":13409,"lst_std":0.947,"ndvi_std":0.091},"krembanganselatan":{"nm":"Krembangan Selatan","kc":"Krembangan","zona":"Tinggi","lst":42.27,"ndvi":0.207,"ndbi":0.036,"ndwi":-0.265,"fraksi":0.99,"kpd":13409,"lst_std":1.035,"ndvi_std":0.125},"morokrembangan":{"nm":"Morokrembangan","kc":"Krembangan","zona":"Sedang","lst":40.03,"ndvi":0.229,"ndbi":-0.09,"ndwi":-0.229,"fraksi":0.745,"kpd":13409,"lst_std":3.77,"ndvi_std":0.186},"perakbarat":{"nm":"Perak Barat","kc":"Krembangan","zona":"Tinggi","lst":43.86,"ndvi":0.187,"ndbi":0.0,"ndwi":-0.228,"fraksi":0.954,"kpd":13409,"lst_std":1.545,"ndvi_std":0.121},"bangkingan":{"nm":"Bangkingan","kc":"Lakarsantri","zona":"Sedang","lst":40.84,"ndvi":0.4,"ndbi":-0.052,"ndwi":-0.42,"fraksi":0.565,"kpd":3390,"lst_std":2.067,"ndvi_std":0.158},"jeruk":{"nm":"Jeruk","kc":"Lakarsantri","zona":"Sedang","lst":38.97,"ndvi":0.486,"ndbi":-0.146,"ndwi":-0.476,"fraksi":0.621,"kpd":3390,"lst_std":2.26,"ndvi_std":0.147},"lakarsantri":{"nm":"Lakarsantri","kc":"Lakarsantri","zona":"Sedang","lst":39.72,"ndvi":0.486,"ndbi":-0.112,"ndwi":-0.481,"fraksi":0.756,"kpd":3390,"lst_std":1.26,"ndvi_std":0.14},"lidahkulon":{"nm":"Lidah Kulon","kc":"Lakarsantri","zona":"Sedang","lst":40.53,"ndvi":0.411,"ndbi":-0.09,"ndwi":-0.422,"fraksi":0.831,"kpd":3390,"lst_std":1.478,"ndvi_std":0.15},"lidahwetan":{"nm":"Lidah Wetan","kc":"Lakarsantri","zona":"Sedang","lst":41.28,"ndvi":0.384,"ndbi":-0.075,"ndwi":-0.408,"fraksi":0.908,"kpd":3390,"lst_std":1.329,"ndvi_std":0.147},"sumurwelut":{"nm":"Sumur Welut","kc":"Lakarsantri","zona":"Sedang","lst":40.62,"ndvi":0.426,"ndbi":-0.082,"ndwi":-0.443,"fraksi":0.617,"kpd":3390,"lst_std":1.575,"ndvi_std":0.137},"dukuhsutorejo":{"nm":"Dukuh Sutorejo","kc":"Mulyorejo","zona":"Sedang","lst":40.0,"ndvi":0.329,"ndbi":-0.109,"ndwi":-0.342,"fraksi":0.702,"kpd":5041,"lst_std":2.888,"ndvi_std":0.198},"kalijudan":{"nm":"Kalijudan","kc":"Mulyorejo","zona":"Tinggi","lst":40.96,"ndvi":0.283,"ndbi":-0.025,"ndwi":-0.314,"fraksi":0.998,"kpd":5041,"lst_std":1.291,"ndvi_std":0.147},"kalisari":{"nm":"Kalisari","kc":"Mulyorejo","zona":"Rendah","lst":37.74,"ndvi":0.313,"ndbi":-0.189,"ndwi":-0.289,"fraksi":0.553,"kpd":5041,"lst_std":4.218,"ndvi_std":0.23},"kejawenputihtambak":{"nm":"Kejawen Putih Tambak","kc":"Mulyorejo","zona":"Rendah","lst":37.17,"ndvi":0.37,"ndbi":-0.224,"ndwi":-0.34,"fraksi":0.598,"kpd":5041,"lst_std":4.233,"ndvi_std":0.251},"manyarsabrangan":{"nm":"Manyar Sabrangan","kc":"Mulyorejo","zona":"Tinggi","lst":42.33,"ndvi":0.243,"ndbi":0.003,"ndwi":-0.307,"fraksi":1.0,"kpd":5041,"lst_std":0.844,"ndvi_std":0.121},"mulyorejo":{"nm":"Mulyorejo","kc":"Mulyorejo","zona":"Tinggi","lst":41.43,"ndvi":0.307,"ndbi":-0.054,"ndwi":-0.349,"fraksi":0.993,"kpd":5041,"lst_std":1.272,"ndvi_std":0.139},"bongkaran":{"nm":"Bongkaran","kc":"Pabean Cantian","zona":"Tinggi","lst":42.27,"ndvi":0.187,"ndbi":0.042,"ndwi":-0.234,"fraksi":1.0,"kpd":13593,"lst_std":0.936,"ndvi_std":0.111},"krembanganutara":{"nm":"Krembangan Utara","kc":"Pabean Cantian","zona":"Sangat Tinggi","lst":43.53,"ndvi":0.138,"ndbi":0.09,"ndwi":-0.211,"fraksi":1.0,"kpd":13593,"lst_std":1.246,"ndvi_std":0.074},"nyamplungan":{"nm":"Nyamplungan","kc":"Pabean Cantian","zona":"Sangat Tinggi","lst":42.59,"ndvi":0.149,"ndbi":0.079,"ndwi":-0.225,"fraksi":1.0,"kpd":13593,"lst_std":0.763,"ndvi_std":0.085},"peraktimur":{"nm":"Perak Timur","kc":"Pabean Cantian","zona":"Sangat Tinggi","lst":43.35,"ndvi":0.173,"ndbi":0.057,"ndwi":-0.233,"fraksi":1.0,"kpd":13593,"lst_std":1.005,"ndvi_std":0.097},"perakutara":{"nm":"Perak Utara","kc":"Pabean Cantian","zona":"Tinggi","lst":42.54,"ndvi":0.156,"ndbi":0.007,"ndwi":-0.186,"fraksi":0.903,"kpd":13593,"lst_std":2.087,"ndvi_std":0.122},"babatjerawat":{"nm":"Babat Jerawat","kc":"Pakal","zona":"Sedang","lst":38.9,"ndvi":0.286,"ndbi":-0.105,"ndwi":-0.287,"fraksi":0.66,"kpd":3377,"lst_std":2.363,"ndvi_std":0.131},"benowo":{"nm":"Benowo","kc":"Pakal","zona":"Sedang","lst":38.4,"ndvi":0.363,"ndbi":-0.099,"ndwi":-0.359,"fraksi":0.699,"kpd":3377,"lst_std":2.388,"ndvi_std":0.138},"pakal":{"nm":"Pakal","kc":"Pakal","zona":"Sedang","lst":39.01,"ndvi":0.353,"ndbi":-0.108,"ndwi":-0.355,"fraksi":0.61,"kpd":3377,"lst_std":2.273,"ndvi_std":0.128},"sumberrejo":{"nm":"Sumberrejo","kc":"Pakal","zona":"Rendah","lst":35.49,"ndvi":0.314,"ndbi":-0.242,"ndwi":-0.253,"fraksi":0.24,"kpd":3377,"lst_std":2.089,"ndvi_std":0.13},"tambakdono":{"nm":"Tambakdono","kc":"Pakal","zona":"Rendah","lst":34.61,"ndvi":0.254,"ndbi":-0.256,"ndwi":-0.19,"fraksi":0.018,"kpd":3377,"lst_std":2.097,"ndvi_std":0.126},"kalirungkut":{"nm":"Kali Rungkut","kc":"Rungkut","zona":"Tinggi","lst":42.67,"ndvi":0.249,"ndbi":0.026,"ndwi":-0.297,"fraksi":0.989,"kpd":5323,"lst_std":1.491,"ndvi_std":0.135},"kedungbaruk":{"nm":"Kedung Baruk","kc":"Rungkut","zona":"Tinggi","lst":42.1,"ndvi":0.31,"ndbi":-0.031,"ndwi":-0.334,"fraksi":0.956,"kpd":5323,"lst_std":1.847,"ndvi_std":0.163},"medokanayu":{"nm":"Medokan Ayu","kc":"Rungkut","zona":"Rendah","lst":37.37,"ndvi":0.341,"ndbi":-0.192,"ndwi":-0.322,"fraksi":0.426,"kpd":5323,"lst_std":3.768,"ndvi_std":0.19},"penjaringansari":{"nm":"Penjaringan Sari","kc":"Rungkut","zona":"Tinggi","lst":41.71,"ndvi":0.316,"ndbi":-0.046,"ndwi":-0.351,"fraksi":0.974,"kpd":5323,"lst_std":1.271,"ndvi_std":0.167},"rungkutkidul":{"nm":"Rungkut Kidul","kc":"Rungkut","zona":"Tinggi","lst":42.85,"ndvi":0.255,"ndbi":0.007,"ndwi":-0.305,"fraksi":0.991,"kpd":5323,"lst_std":1.723,"ndvi_std":0.139},"wonorejo":{"nm":"Wonorejo","kc":"Tegalsari","zona":"Sangat Tinggi","lst":43.44,"ndvi":0.153,"ndbi":0.117,"ndwi":-0.22,"fraksi":0.372,"kpd":22811,"lst_std":0.932,"ndvi_std":0.048},"bringin":{"nm":"Bringin","kc":"Sambikerep","zona":"Sedang","lst":39.93,"ndvi":0.437,"ndbi":-0.084,"ndwi":-0.439,"fraksi":0.661,"kpd":3957,"lst_std":1.471,"ndvi_std":0.149},"lontar":{"nm":"Lontar","kc":"Sambikerep","zona":"Sedang","lst":41.13,"ndvi":0.385,"ndbi":-0.063,"ndwi":-0.401,"fraksi":0.863,"kpd":3957,"lst_std":1.402,"ndvi_std":0.16},"made":{"nm":"Made","kc":"Sambikerep","zona":"Sedang","lst":40.37,"ndvi":0.438,"ndbi":-0.079,"ndwi":-0.451,"fraksi":0.696,"kpd":3957,"lst_std":1.186,"ndvi_std":0.123},"sambikerep":{"nm":"Sambikerep","kc":"Sambikerep","zona":"Sedang","lst":40.63,"ndvi":0.405,"ndbi":-0.082,"ndwi":-0.419,"fraksi":0.86,"kpd":3957,"lst_std":1.439,"ndvi_std":0.157},"banyuurip":{"nm":"Banyu Urip","kc":"Sawahan","zona":"Sangat Tinggi","lst":43.19,"ndvi":0.174,"ndbi":0.111,"ndwi":-0.233,"fraksi":1.0,"kpd":27763,"lst_std":0.88,"ndvi_std":0.096},"kupangkrajan":{"nm":"Kupang Krajan","kc":"Sawahan","zona":"Sangat Tinggi","lst":43.21,"ndvi":0.154,"ndbi":0.118,"ndwi":-0.216,"fraksi":1.0,"kpd":27763,"lst_std":0.84,"ndvi_std":0.058},"pakis":{"nm":"Pakis","kc":"Sawahan","zona":"Sangat Tinggi","lst":42.21,"ndvi":0.274,"ndbi":0.017,"ndwi":-0.319,"fraksi":0.985,"kpd":27763,"lst_std":1.184,"ndvi_std":0.142},"petemon":{"nm":"Petemon","kc":"Sawahan","zona":"Sangat Tinggi","lst":42.94,"ndvi":0.172,"ndbi":0.094,"ndwi":-0.244,"fraksi":1.0,"kpd":27763,"lst_std":0.616,"ndvi_std":0.07},"putatjaya":{"nm":"Putat Jaya","kc":"Sawahan","zona":"Sangat Tinggi","lst":43.48,"ndvi":0.216,"ndbi":0.079,"ndwi":-0.265,"fraksi":0.99,"kpd":27763,"lst_std":0.908,"ndvi_std":0.13},"sawahan":{"nm":"Sawahan","kc":"Sawahan","zona":"Sangat Tinggi","lst":42.41,"ndvi":0.196,"ndbi":0.06,"ndwi":-0.257,"fraksi":1.0,"kpd":27763,"lst_std":0.747,"ndvi_std":0.091},"ampel":{"nm":"Ampel","kc":"Semampir","zona":"Sangat Tinggi","lst":42.98,"ndvi":0.125,"ndbi":0.103,"ndwi":-0.221,"fraksi":1.0,"kpd":20151,"lst_std":0.527,"ndvi_std":0.059},"pegirian":{"nm":"Pegirian","kc":"Semampir","zona":"Sangat Tinggi","lst":42.16,"ndvi":0.213,"ndbi":0.055,"ndwi":-0.264,"fraksi":0.997,"kpd":20151,"lst_std":1.126,"ndvi_std":0.135},"sidotopo":{"nm":"Sidotopo","kc":"Semampir","zona":"Sangat Tinggi","lst":42.82,"ndvi":0.157,"ndbi":0.091,"ndwi":-0.222,"fraksi":1.0,"kpd":20151,"lst_std":0.624,"ndvi_std":0.087},"ujung":{"nm":"Ujung","kc":"Semampir","zona":"Sedang","lst":39.62,"ndvi":0.259,"ndbi":-0.108,"ndwi":-0.26,"fraksi":0.577,"kpd":20151,"lst_std":3.347,"ndvi_std":0.234},"wonokusumo":{"nm":"Wonokusumo","kc":"Semampir","zona":"Sangat Tinggi","lst":42.96,"ndvi":0.146,"ndbi":0.105,"ndwi":-0.211,"fraksi":1.0,"kpd":20151,"lst_std":0.752,"ndvi_std":0.08},"kapasan":{"nm":"Kapasan","kc":"Simokerto","zona":"Sangat Tinggi","lst":42.93,"ndvi":0.145,"ndbi":0.087,"ndwi":-0.216,"fraksi":1.0,"kpd":35511,"lst_std":0.832,"ndvi_std":0.07},"sidodadi":{"nm":"Sidodadi","kc":"Simokerto","zona":"Sangat Tinggi","lst":43.01,"ndvi":0.15,"ndbi":0.089,"ndwi":-0.227,"fraksi":1.0,"kpd":35511,"lst_std":0.447,"ndvi_std":0.081},"simokerto":{"nm":"Simokerto","kc":"Simokerto","zona":"Sangat Tinggi","lst":42.27,"ndvi":0.199,"ndbi":0.056,"ndwi":-0.261,"fraksi":0.994,"kpd":35511,"lst_std":0.718,"ndvi_std":0.111},"simolawang":{"nm":"Simolawang","kc":"Simokerto","zona":"Sangat Tinggi","lst":42.66,"ndvi":0.142,"ndbi":0.096,"ndwi":-0.221,"fraksi":1.0,"kpd":35511,"lst_std":0.631,"ndvi_std":0.075},"tambakrejo":{"nm":"Tambakrejo","kc":"Simokerto","zona":"Sangat Tinggi","lst":42.31,"ndvi":0.192,"ndbi":0.064,"ndwi":-0.245,"fraksi":0.973,"kpd":35511,"lst_std":1.236,"ndvi_std":0.139},"putatgede":{"nm":"Putat Gede","kc":"Suko Manunggal","zona":"Sedang","lst":41.04,"ndvi":0.375,"ndbi":-0.067,"ndwi":-0.389,"fraksi":0.968,"kpd":11304,"lst_std":1.17,"ndvi_std":0.175},"simomulyo":{"nm":"Simomulyo","kc":"Suko Manunggal","zona":"Tinggi","lst":43.12,"ndvi":0.213,"ndbi":0.062,"ndwi":-0.259,"fraksi":0.979,"kpd":11304,"lst_std":1.429,"ndvi_std":0.143},"sonokwijenan":{"nm":"Sono Kwijenan","kc":"Suko Manunggal","zona":"Tinggi","lst":42.78,"ndvi":0.25,"ndbi":-0.002,"ndwi":-0.303,"fraksi":1.0,"kpd":11304,"lst_std":1.165,"ndvi_std":0.126},"sukomanunggal":{"nm":"Suko Manunggal","kc":"Suko Manunggal","zona":"Tinggi","lst":42.46,"ndvi":0.275,"ndbi":-0.005,"ndwi":-0.302,"fraksi":0.931,"kpd":11304,"lst_std":1.763,"ndvi_std":0.174},"tanjungsari":{"nm":"Tanjungsari","kc":"Suko Manunggal","zona":"Tinggi","lst":42.03,"ndvi":0.282,"ndbi":-0.022,"ndwi":-0.323,"fraksi":0.952,"kpd":11304,"lst_std":1.486,"ndvi_std":0.151},"gebangputih":{"nm":"Gebang Putih","kc":"Sukolilo","zona":"Tinggi","lst":41.85,"ndvi":0.306,"ndbi":-0.026,"ndwi":-0.345,"fraksi":0.965,"kpd":3818,"lst_std":1.383,"ndvi_std":0.154},"keputih":{"nm":"Keputih","kc":"Sukolilo","zona":"Rendah","lst":35.48,"ndvi":0.317,"ndbi":-0.26,"ndwi":-0.267,"fraksi":0.295,"kpd":3818,"lst_std":3.849,"ndvi_std":0.263},"klampisngasem":{"nm":"Klampis Ngasem","kc":"Sukolilo","zona":"Tinggi","lst":41.71,"ndvi":0.279,"ndbi":-0.014,"ndwi":-0.33,"fraksi":0.992,"kpd":3818,"lst_std":1.169,"ndvi_std":0.137},"medokansemampir":{"nm":"Medokan Semampir","kc":"Sukolilo","zona":"Sedang","lst":40.32,"ndvi":0.394,"ndbi":-0.111,"ndwi":-0.402,"fraksi":0.828,"kpd":3818,"lst_std":2.025,"ndvi_std":0.17},"menurpumpungan":{"nm":"Menur Pumpungan","kc":"Sukolilo","zona":"Tinggi","lst":42.26,"ndvi":0.26,"ndbi":-0.007,"ndwi":-0.318,"fraksi":1.0,"kpd":3818,"lst_std":0.941,"ndvi_std":0.132},"ngidenjangkungan":{"nm":"Ngiden Jangkungan","kc":"Sukolilo","zona":"Tinggi","lst":42.6,"ndvi":0.243,"ndbi":0.017,"ndwi":-0.299,"fraksi":0.983,"kpd":3818,"lst_std":1.153,"ndvi_std":0.133},"semolowaru":{"nm":"Semolowaru","kc":"Sukolilo","zona":"Tinggi","lst":41.88,"ndvi":0.298,"ndbi":-0.037,"ndwi":-0.337,"fraksi":0.968,"kpd":3818,"lst_std":1.436,"ndvi_std":0.155},"gading":{"nm":"Gading","kc":"Tambaksari","zona":"Sangat Tinggi","lst":41.84,"ndvi":0.166,"ndbi":0.076,"ndwi":-0.219,"fraksi":1.0,"kpd":25306,"lst_std":1.139,"ndvi_std":0.103},"pacarkeling":{"nm":"Pacar Keling","kc":"Tambaksari","zona":"Sangat Tinggi","lst":42.16,"ndvi":0.253,"ndbi":0.038,"ndwi":-0.303,"fraksi":1.0,"kpd":25306,"lst_std":0.736,"ndvi_std":0.125},"pacarkembang":{"nm":"Pacar Kembang","kc":"Tambaksari","zona":"Sangat Tinggi","lst":42.12,"ndvi":0.198,"ndbi":0.073,"ndwi":-0.267,"fraksi":1.0,"kpd":25306,"lst_std":0.762,"ndvi_std":0.104},"ploso":{"nm":"Ploso","kc":"Tambaksari","zona":"Sangat Tinggi","lst":42.15,"ndvi":0.176,"ndbi":0.072,"ndwi":-0.243,"fraksi":0.999,"kpd":25306,"lst_std":0.602,"ndvi_std":0.097},"rangkah":{"nm":"Rangkah","kc":"Tambaksari","zona":"Sangat Tinggi","lst":41.93,"ndvi":0.178,"ndbi":0.076,"ndwi":-0.245,"fraksi":1.0,"kpd":25306,"lst_std":0.612,"ndvi_std":0.089},"tambaksari":{"nm":"Tambaksari","kc":"Tambaksari","zona":"Sangat Tinggi","lst":42.01,"ndvi":0.252,"ndbi":0.031,"ndwi":-0.297,"fraksi":0.978,"kpd":25306,"lst_std":0.961,"ndvi_std":0.155},"balongsari":{"nm":"Balongsari","kc":"Tandes","zona":"Tinggi","lst":43.1,"ndvi":0.187,"ndbi":0.064,"ndwi":-0.217,"fraksi":1.0,"kpd":9248,"lst_std":1.558,"ndvi_std":0.147},"banjarsugihan":{"nm":"Banjar Sugihan","kc":"Tandes","zona":"Sedang","lst":40.95,"ndvi":0.335,"ndbi":-0.041,"ndwi":-0.349,"fraksi":0.781,"kpd":9248,"lst_std":1.791,"ndvi_std":0.154},"bibis":{"nm":"Bibis","kc":"Tandes","zona":"Tinggi","lst":42.32,"ndvi":0.203,"ndbi":0.076,"ndwi":-0.235,"fraksi":0.987,"kpd":9248,"lst_std":1.382,"ndvi_std":0.146},"buntaran":{"nm":"Buntaran","kc":"Tandes","zona":"Tinggi","lst":42.23,"ndvi":0.253,"ndbi":0.002,"ndwi":-0.277,"fraksi":0.606,"kpd":9248,"lst_std":2.686,"ndvi_std":0.145},"gadel":{"nm":"Gadel","kc":"Tandes","zona":"Tinggi","lst":42.44,"ndvi":0.241,"ndbi":0.049,"ndwi":-0.284,"fraksi":1.0,"kpd":9248,"lst_std":0.755,"ndvi_std":0.105},"gedangasin":{"nm":"Gedangasin","kc":"Tandes","zona":"Tinggi","lst":43.05,"ndvi":0.207,"ndbi":0.058,"ndwi":-0.226,"fraksi":0.999,"kpd":9248,"lst_std":1.606,"ndvi_std":0.178},"karangpoh":{"nm":"Karangpoh","kc":"Tandes","zona":"Tinggi","lst":41.57,"ndvi":0.228,"ndbi":0.039,"ndwi":-0.262,"fraksi":1.0,"kpd":9248,"lst_std":1.659,"ndvi_std":0.139},"manukankulon":{"nm":"Manukan Kulon","kc":"Tandes","zona":"Tinggi","lst":42.09,"ndvi":0.197,"ndbi":0.036,"ndwi":-0.222,"fraksi":0.891,"kpd":9248,"lst_std":3.004,"ndvi_std":0.111},"manukanwetan":{"nm":"Manukan Wetan","kc":"Tandes","zona":"Tinggi","lst":42.95,"ndvi":0.176,"ndbi":0.086,"ndwi":-0.205,"fraksi":0.998,"kpd":9248,"lst_std":2.118,"ndvi_std":0.14},"tandeskidul":{"nm":"Tandes Kidul","kc":"Tandes","zona":"Tinggi","lst":42.26,"ndvi":0.258,"ndbi":-0.008,"ndwi":-0.287,"fraksi":0.966,"kpd":9248,"lst_std":1.575,"ndvi_std":0.157},"tandeslor":{"nm":"Tandes Lor","kc":"Tandes","zona":"Tinggi","lst":42.54,"ndvi":0.221,"ndbi":0.02,"ndwi":-0.265,"fraksi":1.0,"kpd":9248,"lst_std":1.221,"ndvi_std":0.138},"tubanan":{"nm":"Tubanan","kc":"Tandes","zona":"Tinggi","lst":42.23,"ndvi":0.298,"ndbi":-0.001,"ndwi":-0.329,"fraksi":0.998,"kpd":9248,"lst_std":0.842,"ndvi_std":0.125},"drsutomo":{"nm":"Dr. Sutomo","kc":"Tegalsari","zona":"Sangat Tinggi","lst":42.22,"ndvi":0.273,"ndbi":-0.006,"ndwi":-0.334,"fraksi":1.0,"kpd":22811,"lst_std":1.175,"ndvi_std":0.127},"kedungdoro":{"nm":"Kedungdoro","kc":"Tegalsari","zona":"Sangat Tinggi","lst":42.91,"ndvi":0.175,"ndbi":0.079,"ndwi":-0.231,"fraksi":1.0,"kpd":22811,"lst_std":1.338,"ndvi_std":0.074},"keputran":{"nm":"Keputran","kc":"Tegalsari","zona":"Sangat Tinggi","lst":42.0,"ndvi":0.24,"ndbi":0.025,"ndwi":-0.302,"fraksi":0.998,"kpd":22811,"lst_std":1.145,"ndvi_std":0.125},"tegalsari":{"nm":"Tegalsari","kc":"Tegalsari","zona":"Sangat Tinggi","lst":42.93,"ndvi":0.203,"ndbi":0.068,"ndwi":-0.258,"fraksi":1.0,"kpd":22811,"lst_std":1.015,"ndvi_std":0.095},"kendangsari":{"nm":"Kendangsari","kc":"Tenggilis Mejoyo","zona":"Tinggi","lst":43.6,"ndvi":0.231,"ndbi":0.037,"ndwi":-0.272,"fraksi":0.999,"kpd":10153,"lst_std":1.435,"ndvi_std":0.133},"kutisari":{"nm":"Kutisari","kc":"Tenggilis Mejoyo","zona":"Tinggi","lst":43.33,"ndvi":0.236,"ndbi":0.03,"ndwi":-0.273,"fraksi":0.978,"kpd":10153,"lst_std":1.557,"ndvi_std":0.136},"panjangjiwo":{"nm":"Panjang Jiwo","kc":"Tenggilis Mejoyo","zona":"Tinggi","lst":41.91,"ndvi":0.281,"ndbi":-0.017,"ndwi":-0.311,"fraksi":0.985,"kpd":10153,"lst_std":1.47,"ndvi_std":0.173},"prapen":{"nm":"Prapen","kc":"Tenggilis Mejoyo","zona":"Tinggi","lst":42.0,"ndvi":0.282,"ndbi":-0.03,"ndwi":-0.338,"fraksi":1.0,"kpd":10153,"lst_std":0.693,"ndvi_std":0.129},"tenggilismejoyo":{"nm":"Tenggilis Mejoyo","kc":"Tenggilis Mejoyo","zona":"Tinggi","lst":42.68,"ndvi":0.243,"ndbi":0.019,"ndwi":-0.293,"fraksi":1.0,"kpd":10153,"lst_std":0.966,"ndvi_std":0.133},"babatan":{"nm":"Babatan","kc":"Wiyung","zona":"Sedang","lst":41.27,"ndvi":0.341,"ndbi":-0.064,"ndwi":-0.374,"fraksi":0.92,"kpd":6089,"lst_std":1.305,"ndvi_std":0.151},"balasklumprik":{"nm":"Balas Klumprik","kc":"Wiyung","zona":"Sedang","lst":40.92,"ndvi":0.416,"ndbi":-0.088,"ndwi":-0.428,"fraksi":0.785,"kpd":6089,"lst_std":1.854,"ndvi_std":0.165},"jajartunggal":{"nm":"Jajar Tunggal","kc":"Wiyung","zona":"Sedang","lst":41.12,"ndvi":0.361,"ndbi":-0.058,"ndwi":-0.383,"fraksi":0.882,"kpd":6089,"lst_std":1.598,"ndvi_std":0.171},"wiyung":{"nm":"Wiyung","kc":"Wiyung","zona":"Sedang","lst":40.32,"ndvi":0.402,"ndbi":-0.099,"ndwi":-0.423,"fraksi":0.789,"kpd":6089,"lst_std":2.208,"ndvi_std":0.184},"bendulmerisi":{"nm":"Bendul Merisi","kc":"Wonocolo","zona":"Tinggi","lst":43.03,"ndvi":0.2,"ndbi":0.058,"ndwi":-0.261,"fraksi":1.0,"kpd":12249,"lst_std":0.973,"ndvi_std":0.072},"jemurwonosari":{"nm":"Jemur Wonosari","kc":"Wonocolo","zona":"Tinggi","lst":42.3,"ndvi":0.268,"ndbi":0.009,"ndwi":-0.321,"fraksi":1.0,"kpd":12249,"lst_std":0.929,"ndvi_std":0.123},"margorejo":{"nm":"Margorejo","kc":"Wonocolo","zona":"Tinggi","lst":42.9,"ndvi":0.246,"ndbi":0.008,"ndwi":-0.305,"fraksi":1.0,"kpd":12249,"lst_std":0.902,"ndvi_std":0.11},"sidosermo":{"nm":"Sidosermo","kc":"Wonocolo","zona":"Tinggi","lst":42.02,"ndvi":0.248,"ndbi":0.016,"ndwi":-0.305,"fraksi":1.0,"kpd":12249,"lst_std":0.874,"ndvi_std":0.117},"siwalankerto":{"nm":"Siwalankerto","kc":"Wonocolo","zona":"Tinggi","lst":42.11,"ndvi":0.316,"ndbi":-0.034,"ndwi":-0.349,"fraksi":0.983,"kpd":12249,"lst_std":1.678,"ndvi_std":0.16},"darmo":{"nm":"Darmo","kc":"Wonokromo","zona":"Tinggi","lst":41.43,"ndvi":0.308,"ndbi":-0.033,"ndwi":-0.355,"fraksi":0.973,"kpd":18765,"lst_std":1.65,"ndvi_std":0.162},"jagir":{"nm":"Jagir","kc":"Wonokromo","zona":"Tinggi","lst":42.1,"ndvi":0.248,"ndbi":0.013,"ndwi":-0.299,"fraksi":0.98,"kpd":18765,"lst_std":1.45,"ndvi_std":0.126},"ngagel":{"nm":"Ngagel","kc":"Wonokromo","zona":"Tinggi","lst":41.36,"ndvi":0.314,"ndbi":-0.039,"ndwi":-0.341,"fraksi":0.937,"kpd":18765,"lst_std":1.505,"ndvi_std":0.182},"ngagelrejo":{"nm":"Ngagelrejo","kc":"Wonokromo","zona":"Sangat Tinggi","lst":42.33,"ndvi":0.191,"ndbi":0.071,"ndwi":-0.257,"fraksi":0.957,"kpd":18765,"lst_std":1.675,"ndvi_std":0.101},"sawunggaling":{"nm":"Sawunggaling","kc":"Wonokromo","zona":"Tinggi","lst":42.75,"ndvi":0.265,"ndbi":0.018,"ndwi":-0.3,"fraksi":0.967,"kpd":18765,"lst_std":1.691,"ndvi_std":0.134},"wonokromo":{"nm":"Wonokromo","kc":"Wonokromo","zona":"Sangat Tinggi","lst":42.66,"ndvi":0.181,"ndbi":0.081,"ndwi":-0.247,"fraksi":0.986,"kpd":18765,"lst_std":1.133,"ndvi_std":0.093}},"top5":[["Perak Barat","Krembangan",43.86,"Tinggi"],["Asemrowo","Asemrowo",43.7,"Tinggi"],["Kendangsari","Tenggilis Mejoyo",43.6,"Tinggi"],["Krembangan Utara","Pabean Cantian",43.53,"Sangat Tinggi"],["Putat Jaya","Sawahan",43.48,"Sangat Tinggi"]],"bot5":[["Tambakdono","Pakal",34.61,"Rendah"],["Keputih","Sukolilo",35.48,"Rendah"],["Sumberrejo","Pakal",35.49,"Rendah"],["Wonorejo","Rungkut",36.46,"Rendah"],["Gununganyartambak","Gunung Anyar",36.71,"Rendah"]],"per_kec":{"Asemrowo":{"n":5,"lst":42.47,"zona":"Tinggi"},"Benowo":{"n":5,"lst":38.66,"zona":"Rendah"},"Bubutan":{"n":5,"lst":42.29,"zona":"Sangat Tinggi"},"Bulak":{"n":5,"lst":39.09,"zona":"Sedang"},"Dukuh Pakis":{"n":4,"lst":41.07,"zona":"Sedang"},"Gayungan":{"n":4,"lst":42.03,"zona":"Tinggi"},"Genteng":{"n":5,"lst":42.0,"zona":"Tinggi"},"Gubeng":{"n":6,"lst":42.15,"zona":"Sangat Tinggi"},"Gunung Anyar":{"n":4,"lst":40.96,"zona":"Tinggi"},"Jambangan":{"n":4,"lst":41.73,"zona":"Tinggi"},"Karang Pilang":{"n":4,"lst":41.81,"zona":"Tinggi"},"Kenjeran":{"n":4,"lst":40.51,"zona":"Sangat Tinggi"},"Krembangan":{"n":5,"lst":42.32,"zona":"Sangat Tinggi"},"Lakarsantri":{"n":6,"lst":40.33,"zona":"Sedang"},"Mulyorejo":{"n":6,"lst":39.94,"zona":"Tinggi"},"Pabean Cantian":{"n":5,"lst":42.86,"zona":"Sangat Tinggi"},"Pakal":{"n":5,"lst":37.28,"zona":"Sedang"},"Rungkut":{"n":6,"lst":40.53,"zona":"Tinggi"},"Sambikerep":{"n":4,"lst":40.51,"zona":"Sedang"},"Sawahan":{"n":6,"lst":42.91,"zona":"Sangat Tinggi"},"Semampir":{"n":5,"lst":42.11,"zona":"Sangat Tinggi"},"Simokerto":{"n":5,"lst":42.64,"zona":"Sangat Tinggi"},"Suko Manunggal":{"n":5,"lst":42.28,"zona":"Tinggi"},"Sukolilo":{"n":7,"lst":40.87,"zona":"Tinggi"},"Tambaksari":{"n":6,"lst":42.03,"zona":"Sangat Tinggi"},"Tandes":{"n":12,"lst":42.31,"zona":"Tinggi"},"Tegalsari":{"n":5,"lst":42.7,"zona":"Sangat Tinggi"},"Tenggilis Mejoyo":{"n":5,"lst":42.71,"zona":"Tinggi"},"Wiyung":{"n":4,"lst":40.91,"zona":"Sedang"},"Wonocolo":{"n":5,"lst":42.47,"zona":"Tinggi"},"Wonokromo":{"n":6,"lst":42.11,"zona":"Tinggi"}},"fi":{"NDBI Mean":0.2246,"Kepadatan":0.1803,"Fraksi Terbangun":0.1212,"LST Mean":0.1183,"NDVI Mean":0.1129,"NDVI StdDev":0.0921,"NDWI Mean":0.0818,"LST StdDev":0.0688},"corr":{"NDBI":0.906,"Fraksi":0.848,"Kepadatan":0.426,"NDWI":0.33,"NDVI":-0.575},"lstm":[["2025-01-01",28.37],["2025-02-01",28.25],["2025-03-01",28.35],["2025-04-01",28.53],["2025-05-01",28.78],["2025-06-01",28.85],["2025-07-01",28.71],["2025-08-01",28.63],["2025-09-01",28.48],["2025-10-01",28.4],["2025-11-01",28.47],["2025-12-01",28.61],["2026-01-01",28.65],["2026-02-01",28.58],["2026-03-01",28.53],["2026-04-01",28.56],["2026-05-01",28.65],["2026-06-01",28.75],["2026-07-01",28.77],["2026-08-01",28.68],["2026-09-01",28.58],["2026-10-01",28.57],["2026-11-01",28.64],["2026-12-01",28.73],["2027-01-01",28.74],["2027-02-01",28.67],["2027-03-01",28.6],["2027-04-01",28.59],["2027-05-01",28.66],["2027-06-01",28.74],["2027-07-01",28.76],["2027-08-01",28.69],["2027-09-01",28.61],["2027-10-01",28.6],["2027-11-01",28.66],["2027-12-01",28.74],["2028-01-01",28.75],["2028-02-01",28.69],["2028-03-01",28.62],["2028-04-01",28.61],["2028-05-01",28.66],["2028-06-01",28.73],["2028-07-01",28.75],["2028-08-01",28.69],["2028-09-01",28.62],["2028-10-01",28.61],["2028-11-01",28.67],["2028-12-01",28.73],["2029-01-01",28.74],["2029-02-01",28.69],["2029-03-01",28.63],["2029-04-01",28.62],["2029-05-01",28.67],["2029-06-01",28.73],["2029-07-01",28.74],["2029-08-01",28.69],["2029-09-01",28.63],["2029-10-01",28.62],["2029-11-01",28.67],["2029-12-01",28.72]],"grad_ndvi":-12.1622,"grad_frak":7.5431,"model_stats":{"mae":0.61,"rmse":0.8,"r2":0.233,"silhouette":0.374,"rf_acc":0.879},"kota_stats":{"lst_min":34.61,"lst_max":43.86,"lst_mean":41.48,"lst_std":1.75},"hist":[["2009-01-01",29.03],["2009-02-01",28.31],["2009-03-01",29.85],["2009-04-01",29.99],["2009-05-01",29.27],["2009-06-01",29.01],["2009-07-01",28.63],["2009-08-01",28.79],["2009-09-01",30.15],["2009-10-01",31.06],["2009-11-01",30.82],["2009-12-01",30.08],["2010-01-01",28.47],["2010-02-01",29.21],["2010-03-01",29.43],["2010-04-01",29.32],["2010-05-01",29.46],["2010-06-01",29.01],["2010-07-01",28.99],["2010-08-01",29.22],["2010-09-01",29.04],["2010-10-01",29.28],["2010-11-01",29.72],["2010-12-01",28.55],["2011-01-01",28.23],["2011-02-01",28.37],["2011-03-01",28.72],["2011-04-01",28.8],["2011-05-01",29.25],["2011-06-01",28.37],["2011-07-01",28.43],["2011-08-01",28.17],["2011-09-01",28.89],["2011-10-01",30.25],["2011-11-01",29.78],["2011-12-01",29.15],["2012-01-01",28.19],["2012-02-01",28.48],["2012-03-01",28.32],["2012-04-01",29.54],["2012-05-01",28.98],["2012-06-01",28.49],["2012-07-01",27.54],["2012-08-01",27.65],["2012-09-01",28.69],["2012-10-01",30.36],["2012-11-01",30.18],["2012-12-01",28.94],["2013-01-01",28.21],["2013-02-01",28.55],["2013-03-01",28.69],["2013-04-01",28.9],["2013-05-01",28.88],["2013-06-01",28.44],["2013-07-01",27.61],["2013-08-01",27.9],["2013-09-01",28.81],["2013-10-01",30.4],["2013-11-01",29.51],["2013-12-01",28.03],["2014-01-01",27.62],["2014-02-01",27.86],["2014-03-01",29.04],["2014-04-01",29.15],["2014-05-01",29.97],["2014-06-01",29.68],["2014-07-01",29.0],["2014-08-01",28.68],["2014-09-01",28.82],["2014-10-01",30.22],["2014-11-01",30.33],["2014-12-01",28.57],["2015-01-01",28.34],["2015-02-01",28.18],["2015-03-01",28.67],["2015-04-01",28.63],["2015-05-01",29.39],["2015-06-01",29.19],["2015-07-01",28.37],["2015-08-01",28.35],["2015-09-01",28.88],["2015-10-01",30.01],["2015-11-01",30.88],["2015-12-01",29.43],["2016-01-01",29.66],["2016-02-01",28.68],["2016-03-01",29.95],["2016-04-01",29.63],["2016-05-01",30.14],["2016-06-01",29.35],["2016-07-01",29.12],["2016-08-01",29.45],["2016-09-01",29.67],["2016-10-01",29.15],["2016-11-01",29.13],["2016-12-01",28.57],["2017-01-01",28.35],["2017-02-01",28.24],["2017-03-01",28.74],["2017-04-01",29.21],["2017-05-01",29.49],["2017-06-01",28.68],["2017-07-01",28.61],["2017-08-01",28.55],["2017-09-01",29.24],["2017-10-01",30.41],["2017-11-01",28.8],["2017-12-01",28.74],["2018-01-01",28.21],["2018-02-01",28.06],["2018-03-01",28.76],["2018-04-01",30.05],["2018-05-01",29.88],["2018-06-01",29.13],["2018-07-01",28.19],["2018-08-01",28.11],["2018-09-01",29.18],["2018-10-01",30.3],["2018-11-01",29.94],["2018-12-01",29.24],["2019-01-01",28.49],["2019-02-01",28.86],["2019-03-01",28.64],["2019-04-01",29.41],["2019-05-01",30.05],["2019-06-01",28.84],["2019-07-01",28.2],["2019-08-01",28.12],["2019-09-01",28.67],["2019-10-01",30.07],["2019-11-01",30.73],["2019-12-01",30.07],["2020-01-01",29.14],["2020-02-01",28.7],["2020-03-01",29.14],["2020-04-01",29.31],["2020-05-01",29.49],["2020-06-01",29.04],["2020-07-01",28.46],["2020-08-01",28.84],["2020-09-01",29.87],["2020-10-01",29.54],["2020-11-01",29.55],["2020-12-01",27.93],["2021-01-01",27.75],["2021-02-01",27.85],["2021-03-01",28.35],["2021-04-01",29.29],["2021-05-01",29.72],["2021-06-01",29.07],["2021-07-01",28.75],["2021-08-01",29.33],["2021-09-01",29.15],["2021-10-01",29.87],["2021-11-01",28.3],["2021-12-01",28.45],["2022-01-01",28.18],["2022-02-01",28.0],["2022-03-01",28.64],["2022-04-01",29.38],["2022-05-01",29.34],["2022-06-01",28.64],["2022-07-01",28.68],["2022-08-01",28.94],["2022-09-01",29.65],["2022-10-01",28.49],["2022-11-01",28.38],["2022-12-01",28.61],["2023-01-01",28.52],["2023-02-01",27.88],["2023-03-01",28.74],["2023-04-01",29.12],["2023-05-01",29.47],["2023-06-01",29.38],["2023-07-01",28.45],["2023-08-01",28.56],["2023-09-01",28.93],["2023-10-01",30.57],["2023-11-01",30.75],["2023-12-01",30.2],["2024-01-01",29.39],["2024-02-01",29.23],["2024-03-01",29.53],["2024-04-01",29.82],["2024-05-01",30.39],["2024-06-01",29.62],["2024-07-01",27.76],["2024-08-01",27.4],["2024-09-01",27.4],["2024-10-01",27.4],["2024-11-01",27.4],["2024-12-01",27.4]]};
-const KEL_KB=RD.kel_kb;
-const TOP5_PANAS=RD.top5;
-const TOP5_DINGIN=RD.bot5;
-const PER_KEC=RD.per_kec;
-const LSTM_DATA=RD.lstm;
-const HIST_DATA=RD.hist;
-const GRAD_NDVI=RD.grad_ndvi;
-const GRAD_FRAK=RD.grad_frak;
-const MS=RD.model_stats;
-const KS=RD.kota_stats;
+const KEL_KB=RD.kel_kb,TOP5_PANAS=RD.top5,TOP5_DINGIN=RD.bot5,PER_KEC=RD.per_kec;
+const LSTM_DATA=RD.lstm,HIST_DATA=RD.hist,GRAD_NDVI=RD.grad_ndvi,GRAD_FRAK=RD.grad_frak;
+const MS=RD.model_stats,KS=RD.kota_stats,FI_DATA=RD.fi;
 
-// ── KONSTANTA ──
-const WARNA={"Rendah":"#2c7bb6","Sedang":"#abd9e9","Tinggi":"#fdae61","Sangat Tinggi":"#d7191c"};
+// ── COLORS ──
+const WARNA={"Rendah":"#3B82F6","Sedang":"#10B981","Tinggi":"#F59E0B","Sangat Tinggi":"#EF4444"};
 const ZONA_MAP={"Dingin":"Rendah","Sedang":"Sedang","Panas":"Tinggi","Sangat Panas":"Sangat Tinggi"};
-const FI_ORDER=[['NDBI Mean',0.2246],['Kepadatan',0.1803],['Fraksi Terbangun',0.1212],['LST Mean',0.1183],['NDVI Mean',0.1129]];
 function normkey(s){return s.toLowerCase().replace(/[^a-z0-9]/g,'');}
 function normq(s){return s.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();}
 
+// ── INIT FEATURE IMPORTANCE ──
+(function(){
+  const fi=document.getElementById('fi-panel');
+  if(!fi)return;
+  const items=Object.entries(FI_DATA).sort((a,b)=>b[1]-a[1]);
+  const max=items[0][1];
+  fi.innerHTML=items.map(([nm,val])=>`
+    <div class="fi-row">
+      <span class="fi-nm">${nm}</span>
+      <div class="fi-tr"><div class="fi-fl" style="width:${(val/max*100).toFixed(0)}%"></div></div>
+      <span class="fi-v">${(val*100).toFixed(1)}%</span>
+    </div>`).join('');
+})();
+
 // ── FILTER ──
 const selKec=document.getElementById('f-kec');
-const kecList=Object.keys(PER_KEC).sort();
-kecList.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;selKec.appendChild(o)});
-selKec.insertAdjacentHTML('afterbegin','<option value="">Semua Kecamatan</option>');
-
-let geoLayer=null, filteredKeys=new Set(), filterActive=false;
-function sty(f){const z=f.properties.zona||ZONA_MAP[f.properties.zona_iklim]||'Sedang';return{fillColor:WARNA[z]||'#ccc',weight:.7,color:'#fff',fillOpacity:.82};}
-
+Object.keys(PER_KEC).sort().forEach(k=>{
+  const o=document.createElement('option'); o.value=k; o.textContent=k; selKec.appendChild(o);
+});
+let geoLayer=null, filterKeys=new Set(), filterOn=false;
+const sty=f=>{
+  const z=f.properties.zona||ZONA_MAP[f.properties.zona_iklim]||'Sedang';
+  return{fillColor:WARNA[z]||'#64748B',weight:.5,color:'rgba(255,255,255,.12)',fillOpacity:.85};
+};
 function applyFilter(){
   const zona=document.getElementById('f-zona').value;
   const kec=document.getElementById('f-kec').value;
-  filterActive=!!(zona||kec);
-  filteredKeys.clear(); let count=0;
+  filterOn=!!(zona||kec); filterKeys.clear(); let n=0;
   if(!geoLayer)return;
   geoLayer.eachLayer(layer=>{
     const p=layer.feature.properties;
     const z=p.zona||ZONA_MAP[p.zona_iklim]||'';
-    const kc=p.WADMKC||'';
-    const show=(!zona||z===zona)&&(!kec||kc===kec);
-    if(show){
-      layer.setStyle({...sty(layer.feature),fillOpacity:.85});
-      filteredKeys.add(p.WADMKD); count++;
-    } else {
-      layer.setStyle({fillOpacity:0,weight:0});
-    }
+    const show=(!zona||z===zona)&&(!kec||p.WADMKC===kec);
+    if(show){layer.setStyle({...sty(layer.feature),fillOpacity:.9});filterKeys.add(p.WADMKD);n++;}
+    else{layer.setStyle({fillOpacity:0,weight:0});}
   });
-  document.getElementById('fcount').textContent=count?count+' kelurahan':'';
+  document.getElementById('fcount').textContent=n?n+' kelurahan':'';
 }
-
 function resetFilter(){
-  document.getElementById('f-zona').value='';
-  document.getElementById('f-kec').value='';
+  document.getElementById('f-zona').value=''; document.getElementById('f-kec').value='';
   document.getElementById('fcount').textContent='';
-  filterActive=false; filteredKeys.clear();
+  filterOn=false; filterKeys.clear();
   if(geoLayer)geoLayer.eachLayer(l=>l.setStyle(sty(l.feature)));
 }
 
 // ── TABS ──
-let chartsInit=false, selKelData=null;
-document.querySelectorAll('.tab').forEach(t=>{
-  t.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
-    if(t.dataset.tab==='proj'){
-      if(!chartsInit){buildCityChart();chartsInit=true;}
-      if(selKelData) buildKelChart(selKelData);
-    }
-  });
-});
+let chartsInit=false, selKel=null;
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+  if(t.dataset.tab==='proj'&&!chartsInit){buildCityChart();chartsInit=true;}
+  if(t.dataset.tab==='proj'&&selKel){buildKelChart(selKel);}
+}));
 
-// ── PETA ──
-const map=L.map('map').setView([-7.28,112.73],12);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19}).addTo(map);
-let sel=null;
+// ── MAP ──
+const map=L.map('map',{zoomControl:true}).setView([-7.28,112.73],12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  {attribution:'© OpenStreetMap © CARTO',maxZoom:19}).addTo(map);
+let selLayer=null;
 
 fetch('data/surabaya_uhi.geojson').then(r=>r.json()).then(gj=>{
   geoLayer=L.geoJSON(gj,{
     style:sty,
     onEachFeature:(f,layer)=>{
-      const p=f.properties;
-      const nm=p.WADMKD||'', kc=p.WADMKC||'';
-      const z=p.zona||ZONA_MAP[p.zona_iklim]||'-';
-      const lst=p.LST_mean?+p.LST_mean:0, wz=WARNA[z]||'#888';
-      layer.bindPopup(`<b>${nm}</b><br><small style="color:#666">${kc}</small><br><span style="background:${wz};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">${z}</span><br><small>LST: <b>${lst.toFixed(2)}°C</b></small>`);
+      const p=f.properties, nm=p.WADMKD||'', kc=p.WADMKC||'';
+      const z=p.zona||ZONA_MAP[p.zona_iklim]||'-', lst=+(p.LST_mean||0), wz=WARNA[z]||'#888';
+      layer.bindPopup(`
+        <div style="min-width:160px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px">${nm}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-bottom:6px">${kc}</div>
+          <span style="background:${wz};color:#FFFFFF;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700">${z}</span>
+          <div style="margin-top:6px;font-size:12px">LST: <strong>${lst.toFixed(2)}°C</strong></div>
+        </div>`);
       layer.on('click',()=>{
-        if(sel)sel.setStyle(sty(sel.feature));
-        layer.setStyle({weight:2.5,color:'#333',fillOpacity:.95}); sel=layer;
+        if(selLayer)selLayer.setStyle(sty(selLayer.feature));
+        layer.setStyle({weight:2.5,color:wz,fillOpacity:.95}); selLayer=layer;
         showDetail(nm,kc,z,lst,p);
+        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+        document.querySelector('[data-tab="analysis"]').classList.add('active');
+        document.getElementById('panel-analysis').classList.add('active');
       });
-      // FIX: hover hanya aktif kalau tidak difilter
       layer.on('mouseover',()=>{
-        if(layer===sel)return;
-        if(filterActive && !filteredKeys.has(nm))return;
-        layer.setStyle({fillOpacity:1,weight:1.5,color:'#333'});
+        if(layer===selLayer)return;
+        if(filterOn&&!filterKeys.has(nm))return;
+        layer.setStyle({fillOpacity:1,weight:1.5,color:wz});
       });
       layer.on('mouseout',()=>{
-        if(layer===sel)return;
-        if(filterActive && !filteredKeys.has(nm)){layer.setStyle({fillOpacity:0,weight:0});return;}
+        if(layer===selLayer)return;
+        if(filterOn&&!filterKeys.has(nm)){layer.setStyle({fillOpacity:0,weight:0});return;}
         layer.setStyle(sty(f));
       });
     }
   }).addTo(map);
   map.fitBounds(geoLayer.getBounds());
-}).catch(()=>console.error('Gagal muat geojson'));
+}).catch(()=>{document.getElementById('mhint').textContent='⚠ Gagal memuat data';});
 
-// ── ANALISIS KELURAHAN ──
+// ── STATUS HELPER ──
+function getStatus(z){
+  if(z==='Sangat Tinggi')return{cls:'sp-danger',lbl:'🔴 Prioritas Tinggi'};
+  if(z==='Tinggi')return{cls:'sp-warn',lbl:'🟠 Perlu Mitigasi'};
+  return{cls:'sp-safe',lbl:'🟢 Zona Aman'};
+}
 function getRekom(z,ndvi,fraksi){
   const r=[];
-  if(ndvi<0.2)r.push('🌿 Tambah RTH — NDVI '+ndvi.toFixed(3)+', vegetasi sangat minim.');
-  if(fraksi>0.95)r.push('🏗️ Kendalikan bangunan baru — terbangun '+(fraksi*100).toFixed(0)+'%.');
-  if(z==='Sangat Tinggi')r.push('🌳 Atap hijau &amp; dinding hijau di gedung bertingkat.');
-  if(z==='Tinggi'||z==='Sangat Tinggi')r.push('💧 Optimalkan SPAH untuk meningkatkan kelembapan mikro.');
-  if(!r.length)r.push('✅ Pertahankan tutupan hijau yang sudah baik.');
+  if(ndvi<0.2)r.push('Tambah RTH — NDVI '+ndvi.toFixed(3)+', vegetasi sangat minim.');
+  if(fraksi>0.95)r.push('Kendalikan bangunan baru — terbangun '+(fraksi*100).toFixed(0)+'%.');
+  if(z==='Sangat Tinggi')r.push('Atap hijau & dinding hijau pada gedung bertingkat.');
+  if(z==='Tinggi'||z==='Sangat Tinggi')r.push('SPAH untuk tingkatkan kelembapan udara mikro.');
+  if(!r.length)r.push('Pertahankan tutupan hijau yang sudah baik.');
   return r;
 }
-function getAIText(k){
-  const z=k.zona, lst=k.lst.toFixed(1), ndvi=k.ndvi.toFixed(3);
-  if(z==='Sangat Tinggi')return `${k.nm} adalah inti UHI dengan LST ${lst}°C dan terbangun ${(k.fraksi*100).toFixed(0)}%. Prioritas mitigasi tertinggi di Surabaya. Tanpa intervensi, zona ini akan tetap menjadi episenter panas hingga 2029.`;
-  if(z==='Tinggi')return `${k.nm} berada di zona panas (LST ${lst}°C). NDVI ${ndvi} sangat rendah — penambahan RTH adalah intervensi paling efektif. Gunakan Simulasi Mitigasi di bawah untuk melihat dampaknya.`;
-  if(z==='Sedang')return `${k.nm} di zona transisi (LST ${lst}°C). Pertahankan dan tingkatkan vegetasi agar tidak beralih ke zona panas.`;
-  return `${k.nm} salah satu kelurahan sejuk (LST ${lst}°C, NDVI ${ndvi}). Pertahankan tutupan hijau sebagai buffer termal kota.`;
+function getAIText(kd){
+  const z=kd.zona,lst=kd.lst.toFixed(1),ndvi=kd.ndvi.toFixed(3);
+  if(z==='Sangat Tinggi')return `Berdasarkan dataset penelitian, <strong>${kd.nm}</strong> termasuk Zona Inti UHI dengan LST ${lst}°C dan fraksi terbangun ${(kd.fraksi*100).toFixed(0)}%. Faktor dominan: NDBI tinggi (${kd.ndbi.toFixed(3)}) dan kepadatan ${kd.kpd.toLocaleString('id')} jiwa/km². Prioritas mitigasi tertinggi — intervensi penghijauan segera diperlukan.`;
+  if(z==='Tinggi')return `<strong>${kd.nm}</strong> berada di Zona Tinggi (LST ${lst}°C). NDVI ${ndvi} menunjukkan vegetasi minimal. Random Forest menempatkan NDBI sebagai faktor #1 — peningkatan RTH adalah intervensi paling efektif. Gunakan Simulasi Mitigasi di bawah.`;
+  if(z==='Sedang')return `<strong>${kd.nm}</strong> di Zona Sedang (LST ${lst}°C, NDVI ${ndvi}). Zona transisi yang perlu dipantau. Pertahankan dan tingkatkan vegetasi agar tidak beralih ke zona lebih panas.`;
+  return `<strong>${kd.nm}</strong> adalah kelurahan Zona Rendah (LST ${lst}°C, NDVI ${ndvi}). Kondisi termal relatif baik — pertahankan tutupan hijau sebagai buffer termal kota.`;
 }
 
+// ── SHOW DETAIL ──
 function showDetail(nm,kc,z,lst,props){
   document.getElementById('ph').style.display='none';
-  const el=document.getElementById('detail'); el.style.display='block';
-  const ndvi=+(props.NDVI_mean||0), fraksi=+(props.fraksi_terbangun||0), kpd=+(props.kepadatan_per_km2||0);
-  const ndbi=+(props.NDBI_mean||0);
-  const wz=WARNA[z]||'#888', lstC=lst>42?'#d7191c':lst>40?'#e07b00':'#2c7bb6';
-  const rekom=getRekom(z,ndvi,fraksi);
-
-  // lookup kelurahan di KB
-  const kb_key=normkey(nm);
-  const kd=KEL_KB[kb_key]||{nm,kc,zona:z,lst,ndvi,ndbi,fraksi,kpd};
-  selKelData=kd;
+  const el=document.getElementById('kdetail'); el.style.display='block';
+  const ndvi=+(props.NDVI_mean||0), fraksi=+(props.fraksi_terbangun||0), kpd=+(props.kepadatan_per_km2||0), ndbi=+(props.NDBI_mean||0);
+  const wz=WARNA[z]||'#888', lstC=lst>42?'#EF4444':lst>40?'#F59E0B':'#3B82F6';
+  const st=getStatus(z), rk=getRekom(z,ndvi,fraksi);
+  const kd=KEL_KB[normkey(nm)]||{nm,kc,zona:z,lst,ndvi,ndbi,fraksi,kpd};
+  selKel=kd;
 
   el.innerHTML=`<div class="kcard">
     <div class="khdr">
-      <div><div class="kname">${nm}</div><div class="kkec">Kec. ${kc}</div></div>
-      <div class="zbadge" style="background:${wz}">${z}</div>
+      <div>
+        <div class="kname">${nm}</div>
+        <div class="kkec">${kc}</div>
+      </div>
+      <div class="kright">
+        <div class="zbadge" style="background:${wz}">${z}</div>
+        <div class="status-pill ${st.cls}">${st.lbl}</div>
+      </div>
     </div>
     <div class="sg">
-      <div class="sb"><div class="sv" style="color:${lstC}">${lst.toFixed(2)}°C</div><div class="sl">Suhu Permukaan (LST)</div></div>
-      <div class="sb"><div class="sv">${ndvi.toFixed(3)}</div><div class="sl">NDVI (Vegetasi)</div></div>
-      <div class="sb"><div class="sv">${(fraksi*100).toFixed(0)}%</div><div class="sl">Fraksi Terbangun</div></div>
-      <div class="sb"><div class="sv">${kpd?kpd.toLocaleString('id'):'-'}</div><div class="sl">Kepadatan (jiwa/km²)</div></div>
+      <div class="sb"><div class="sv" style="color:${lstC}">${lst.toFixed(2)}°C</div><div class="sl">🌡 Land Surface Temp.</div></div>
+      <div class="sb"><div class="sv" style="color:#10B981">${ndvi.toFixed(3)}</div><div class="sl">🌿 NDVI (Vegetasi)</div></div>
+      <div class="sb"><div class="sv">${(fraksi*100).toFixed(0)}%</div><div class="sl">🏗 Fraksi Terbangun</div></div>
+      <div class="sb"><div class="sv">${kpd?kpd.toLocaleString('id'):'-'}</div><div class="sl">👥 Kepadatan /km²</div></div>
     </div>
-    <div class="bw"><div class="bl"><span>Intensitas UHI</span><span>${(lst/43.9*100).toFixed(0)}%</span></div>
-      <div class="br"><div class="bf" style="width:${lst/43.9*100}%;background:${wz}"></div></div></div>
-    <div class="bw"><div class="bl"><span>Tutupan Terbangun</span><span>${(fraksi*100).toFixed(0)}%</span></div>
-      <div class="br"><div class="bf" style="width:${fraksi*100}%;background:${fraksi>.8?'#d7191c':fraksi>.5?'#fdae61':'#2c7bb6'}"></div></div></div>
-    <div class="bw"><div class="bl"><span>Vegetasi (NDVI)</span><span>${(Math.min(ndvi/.5,1)*100).toFixed(0)}%</span></div>
-      <div class="br"><div class="bf" style="width:${Math.min(ndvi/.5,1)*100}%;background:#4CAF50"></div></div></div>
-    <div class="rs">
-      <div class="rt">🎯 Rekomendasi Mitigasi</div>
-      ${rekom.map((r,i)=>`<div class="ri"><div class="ric">${i+1}</div><div>${r}</div></div>`).join('')}
+    <div class="bars">
+      <div class="brow"><span class="brn">Intensitas</span><div class="brtrack"><div class="brfill" style="width:${(lst/43.9*100).toFixed(0)}%;background:${wz}"></div></div><span class="brv">${(lst/43.9*100).toFixed(0)}%</span></div>
+      <div class="brow"><span class="brn">Terbangun</span><div class="brtrack"><div class="brfill" style="width:${(fraksi*100).toFixed(0)}%;background:${fraksi>.8?'#EF4444':fraksi>.5?'#F59E0B':'#3B82F6'}"></div></div><span class="brv">${(fraksi*100).toFixed(0)}%</span></div>
+      <div class="brow"><span class="brn">Vegetasi</span><div class="brtrack"><div class="brfill" style="width:${(Math.min(ndvi/.5,1)*100).toFixed(0)}%;background:#10B981"></div></div><span class="brv">${(Math.min(ndvi/.5,1)*100).toFixed(0)}%</span></div>
     </div>
-    <div class="air"><b style="font-size:.7rem;color:var(--ai)">🤖 Analisis AI</b><br>${getAIText(kd)}</div>
-    <div class="sim-box" id="sim-box">
-      <div class="sim-title">🧪 Simulasi Mitigasi</div>
-      <div class="slider-row">
-        <div class="slider-label"><span>🌿 Tambah Vegetasi (NDVI)</span><span id="sl-ndvi-val">+0,00</span></div>
+    <div class="rbox">
+      <div class="rbox-title">🎯 Rekomendasi Mitigasi</div>
+      ${rk.map((r,i)=>`<div class="ritem"><div class="ric">${i+1}</div><div>${r}</div></div>`).join('')}
+    </div>
+    <div class="aibox">
+      <div class="aibox-hdr">🤖 GeoAI Spatial Interpretation</div>
+      <p>${getAIText(kd)}</p>
+    </div>
+    <div class="simbox">
+      <div class="simbox-hdr">🧪 Simulasi Mitigasi</div>
+      <div class="slrow">
+        <div class="sllbl"><span>🌿 Tambah vegetasi (ΔNDVI)</span><span id="sl-nv">+0,00</span></div>
         <input type="range" id="sl-ndvi" min="0" max="0.25" step="0.01" value="0" oninput="runSim()">
       </div>
-      <div class="slider-row">
-        <div class="slider-label"><span>🏗️ Kurangi Terbangun</span><span id="sl-frak-val">−0%</span></div>
+      <div class="slrow">
+        <div class="sllbl"><span>🏗 Kurangi terbangun (Δ%)</span><span id="sl-fb">−0%</span></div>
         <input type="range" id="sl-frak" min="0" max="0.3" step="0.01" value="0" oninput="runSim()">
       </div>
-      <div class="sim-result">
-        <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">Estimasi LST setelah mitigasi</div>
-        <div class="sim-lst" id="sim-lst">${lst.toFixed(2)}°C</div>
-        <div class="sim-delta" id="sim-delta" style="color:var(--muted)">geser slider untuk simulasi</div>
+      <div class="simresult">
+        <div style="font-size:.67rem;color:#6B7280;margin-bottom:3px">Estimasi LST setelah mitigasi</div>
+        <div class="simlst" id="simlst">${lst.toFixed(2)}°C</div>
+        <div class="simdelta" id="simdelta" style="color:#64748B">Geser slider untuk simulasi</div>
       </div>
-      <div style="font-size:.67rem;color:var(--muted);margin-top:5px">⚠️ Estimasi berdasarkan korelasi Pearson (r_NDVI=−0,575, r_fraksi=+0,848)</div>
+      <div class="simnote">Estimasi berdasarkan korelasi Pearson r(NDVI)=−0,575 · r(Fraksi)=+0,848</div>
     </div>
-    <div style="margin-top:8px;text-align:center">
-      <button onclick="goProjKel()" style="background:var(--navy);color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.75rem;cursor:pointer">📈 Lihat Proyeksi ${nm}</button>
-    </div>
+    <button class="projbtn" onclick="goProjKel()">📈 Analisis Proyeksi ${nm} →</button>
   </div>`;
-  // simpan LST asli untuk simulasi
   el.dataset.lstBase=lst;
-  el.dataset.ndvi=ndvi;
-  el.dataset.fraksi=fraksi;
 }
 
-// ── SIMULASI MITIGASI ──
+// ── SIMULASI ──
 function runSim(){
-  const el=document.getElementById('detail');
-  if(!el)return;
-  const lstBase=+el.dataset.lstBase, ndviBase=+el.dataset.ndvi, frakBase=+el.dataset.fraksi;
-  const dNdvi=+document.getElementById('sl-ndvi').value;
-  const dFrak=+document.getElementById('sl-frak').value;
-  // delta LST = GRAD_NDVI * dNDVI + GRAD_FRAK * (-dFrak)
-  const dLst = GRAD_NDVI*dNdvi + GRAD_FRAK*(-dFrak);
-  const newLst = Math.max(30, lstBase+dLst);
-  document.getElementById('sl-ndvi-val').textContent='+'+dNdvi.toFixed(2);
-  document.getElementById('sl-frak-val').textContent='−'+(dFrak*100).toFixed(0)+'%';
-  document.getElementById('sim-lst').textContent=newLst.toFixed(2)+'°C';
-  const totalDelta=dLst;
-  const col=totalDelta<0?'#16a34a':totalDelta>0?'#dc2626':var_muted;
-  document.getElementById('sim-delta').style.color=totalDelta<0?'#16a34a':'#dc2626';
-  document.getElementById('sim-delta').textContent=
-    totalDelta===0?'geser slider untuk simulasi':
-    (totalDelta<0?`↓ LST turun ${Math.abs(totalDelta).toFixed(2)}°C`:`↑ LST naik ${totalDelta.toFixed(2)}°C`);
+  const el=document.getElementById('kdetail'); if(!el)return;
+  const base=+el.dataset.lstBase;
+  const dn=+document.getElementById('sl-ndvi').value;
+  const df=+document.getElementById('sl-frak').value;
+  const dLst=GRAD_NDVI*dn+GRAD_FRAK*(-df);
+  const newLst=Math.max(30,base+dLst);
+  document.getElementById('sl-nv').textContent='+'+dn.toFixed(2);
+  document.getElementById('sl-fb').textContent='−'+(df*100).toFixed(0)+'%';
+  document.getElementById('simlst').textContent=newLst.toFixed(2)+'°C';
+  const dd=document.getElementById('simdelta');
+  if(dLst===0){dd.textContent='Geser slider untuk simulasi';dd.style.color='#64748B';}
+  else if(dLst<0){dd.textContent='↓ LST turun '+Math.abs(dLst).toFixed(2)+'°C';dd.style.color='#10B981';}
+  else{dd.textContent='↑ LST naik '+dLst.toFixed(2)+'°C';dd.style.color='#EF4444';}
 }
-const var_muted='#6b6560';
 
 // ── PROYEKSI ──
-let cityChart=null, seasonChart=null, kelChart=null;
-
+let cityChart=null,kelChart=null;
 function buildCityChart(){
   const pc=document.getElementById('proj-content');
-  const hLabels=HIST_DATA.map(d=>d[0].substring(0,7));
-  const hVals=HIST_DATA.map(d=>d[1]);
-  const lLabels=LSTM_DATA.map(d=>d[0].substring(0,7));
-  const lVals=LSTM_DATA.map(d=>d[1]);
-  // confidence band (±RMSE)
-  const upper=lVals.map(v=>+(v+MS.rmse).toFixed(2));
-  const lower=lVals.map(v=>+(v-MS.rmse).toFixed(2));
-
+  const hL=HIST_DATA.map(d=>d[0].substring(0,7)), hV=HIST_DATA.map(d=>d[1]);
+  const lL=LSTM_DATA.map(d=>d[0].substring(0,7)), lV=LSTM_DATA.map(d=>d[1]);
+  const upper=lV.map(v=>+(v+MS.rmse).toFixed(2)), lower=lV.map(v=>+(v-MS.rmse).toFixed(2));
   pc.innerHTML=`
-  <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
-    <div id="kel-proj-section" style="display:none">
-      <div class="proj-title" id="kel-proj-title">📍 Proyeksi Kelurahan</div>
-      <div id="kel-proj-cards" class="kel-proj" style="margin-bottom:10px"></div>
-      <div class="chart-box" style="margin-bottom:8px"><canvas id="kelChart"></canvas></div>
-      <div id="fi-section" style="margin-bottom:8px"></div>
-    </div>
-    <div class="proj-title">🌡️ Tren Suhu Kota Surabaya</div>
-    <div class="proj-sub" id="proj-sub-city">Historis BMKG 2009–2024 + Proyeksi LSTM 2025–2029</div>
-    <div class="chart-box"><canvas id="cityChart"></canvas></div>
-    <div class="proj-cards">
+  <div class="proj-wrap">
+    <div id="kel-section" style="display:none;margin-bottom:6px"></div>
+    <div class="section-hdr">🌡 Tren Suhu Kota Surabaya</div>
+    <div class="note" style="margin-bottom:6px">Historis BMKG Tanjung Perak 2009–2024 + Proyeksi LSTM 2025–2029</div>
+    <div class="cbox"><canvas id="cityChart"></canvas></div>
+    <div class="pcards">
       <div class="pc"><div class="pc-v">28,54°C</div><div class="pc-l">Awal 2025</div></div>
       <div class="pc"><div class="pc-v">28,72°C</div><div class="pc-l">Akhir 2029</div></div>
-      <div class="pc"><div class="pc-v">+0,16°C</div><div class="pc-l">Kenaikan 5Thn</div></div>
-      <div class="pc"><div class="pc-v">±${MS.rmse}°C</div><div class="pc-l">Interval</div></div>
+      <div class="pc"><div class="pc-v">+0,16°C</div><div class="pc-l">Kenaikan</div></div>
+      <div class="pc"><div class="pc-v">±${MS.rmse}°C</div><div class="pc-l">Interval RMSE</div></div>
     </div>
-    <div class="note-box">⚠️ Proyeksi LSTM = suhu <b>udara</b> stasiun BMKG (± 28–29°C), bukan LST permukaan (± 42°C). R² = ${MS.r2} → posisikan sebagai proyeksi <b>arah tren</b>.</div>
+    <div class="note">⚠ Proyeksi LSTM = suhu <strong>udara</strong> stasiun BMKG (±28–29°C), bukan LST permukaan (±42°C). R²=0,233 → posisikan sebagai proyeksi arah tren.</div>
   </div>`;
-
   const ctx=document.getElementById('cityChart').getContext('2d');
   cityChart=new Chart(ctx,{type:'line',data:{
-    labels:[...hLabels,...lLabels],
+    labels:[...hL,...lL],
     datasets:[
-      {label:'Historis BMKG',data:[...hVals,...Array(lVals.length).fill(null)],borderColor:'#2c7bb6',borderWidth:1.5,pointRadius:0,tension:.3},
-      {label:'Proyeksi LSTM',data:[...Array(hVals.length).fill(null),...lVals],borderColor:'#d7191c',borderWidth:2,borderDash:[5,3],pointRadius:0,tension:.3},
-      {label:'Interval atas (+RMSE)',data:[...Array(hVals.length).fill(null),...upper],borderColor:'rgba(215,25,28,.2)',backgroundColor:'rgba(215,25,28,.08)',borderWidth:1,borderDash:[2,3],pointRadius:0,fill:'+1'},
-      {label:'Interval bawah (−RMSE)',data:[...Array(hVals.length).fill(null),...lower],borderColor:'rgba(215,25,28,.2)',borderWidth:1,borderDash:[2,3],pointRadius:0,fill:false},
+      {label:'Historis BMKG',data:[...hV,...Array(lV.length).fill(null)],
+        borderColor:'#3B82F6',borderWidth:1.5,pointRadius:0,tension:.3,fill:false},
+      {label:'Proyeksi LSTM',data:[...Array(hV.length).fill(null),...lV],
+        borderColor:'#EF4444',borderWidth:2,borderDash:[5,3],pointRadius:0,tension:.3,fill:false},
+      {label:'Interval atas',data:[...Array(hV.length).fill(null),...upper],
+        borderColor:'rgba(239,68,68,.15)',backgroundColor:'rgba(239,68,68,.07)',
+        borderWidth:1,borderDash:[2,4],pointRadius:0,fill:'+1'},
+      {label:'lower_',data:[...Array(hV.length).fill(null),...lower],
+        borderColor:'rgba(239,68,68,.05)',pointRadius:0,borderWidth:0,fill:false},
     ]
   },options:{responsive:true,maintainAspectRatio:true,
-    plugins:{legend:{labels:{font:{size:9},boxWidth:18,filter:i=>i.text!=='Interval bawah (−RMSE)'}},
+    plugins:{legend:{labels:{color:'#6B7280',font:{size:9},boxWidth:16,
+      filter:i=>i.text!=='lower_'}},
       tooltip:{callbacks:{title:t=>t[0].label,label:c=>c.dataset.label+': '+c.raw+'°C'}}},
-    scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}},grid:{display:false}},
-      y:{ticks:{callback:v=>v+'°C',font:{size:9}},
-        title:{display:true,text:'Suhu Udara (°C)',font:{size:9}}}}}});
+    scales:{
+      x:{ticks:{color:'#6B7280',maxTicksLimit:8,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}},
+      y:{ticks:{color:'#6B7280',callback:v=>v+'°C',font:{size:9}},
+        grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'Suhu Udara (°C)',color:'#64748B',font:{size:9}}}
+    }}});
 }
 
 function goProjKel(){
@@ -488,120 +623,131 @@ function goProjKel(){
   document.querySelector('[data-tab="proj"]').classList.add('active');
   document.getElementById('panel-proj').classList.add('active');
   if(!chartsInit){buildCityChart();chartsInit=true;}
-  if(selKelData) buildKelChart(selKelData);
+  if(selKel) buildKelChart(selKel);
 }
 
 function buildKelChart(kd){
-  const sec=document.getElementById('kel-proj-section');
-  if(!sec)return;
+  const sec=document.getElementById('kel-section'); if(!sec)return;
   sec.style.display='block';
-  document.getElementById('kel-proj-title').textContent=`📍 Proyeksi LST: ${kd.nm}`;
-
-  // estimasi LST per tahun berdasarkan tren kota + selisih dari baseline
-  const baseKota=28.54; // suhu kota awal 2025
-  const diffFromKota=kd.lst-KS.lst_mean; // selisih kelurahan dari rata-rata kota
-  const years=[2025,2026,2027,2028,2029];
-  const lstProj=years.map((y,i)=>{
-    const kotyGrowth=+(LSTM_DATA.filter(d=>d[0].startsWith(y)).reduce((a,b)=>a+b[1],0)/12);
-    const growth=kotyGrowth-baseKota; // delta dari baseline kota
-    return +(kd.lst+growth*0.6).toFixed(2); // scaling factor
-  });
-  const lstEnd=lstProj[4], delta=+(lstEnd-kd.lst).toFixed(2);
-
-  // cards
+  const diff=kd.lst-KS.lst_mean;
+  const lstProj=LSTM_DATA.filter((_,i)=>i%6===5).map(d=>{
+    const kGrowth=+(LSTM_DATA.filter(x=>x[0].startsWith(d[0].substring(0,4))).reduce((a,b)=>a+b[1],0)/12);
+    return +(kd.lst+(kGrowth-28.54)*0.6).toFixed(2);
+  }).slice(0,5);
+  const yrs=['2025','2026','2027','2028','2029'];
+  const lstEnd=lstProj[4]||kd.lst+0.1, delta=+(lstEnd-kd.lst).toFixed(2);
   const prio=kd.zona==='Sangat Tinggi'?'⭐⭐⭐⭐⭐':kd.zona==='Tinggi'?'⭐⭐⭐⭐':kd.zona==='Sedang'?'⭐⭐⭐':'⭐⭐';
-  document.getElementById('kel-proj-cards').innerHTML=`
-    <div class="kp-box">
-      <div class="kp-title">K-Means</div>
-      <div style="display:inline-block;background:${WARNA[kd.zona]||'#888'};color:#fff;padding:3px 9px;border-radius:20px;font-size:.73rem;font-weight:700">${kd.zona}</div>
-      <div class="kp-sub" style="margin-top:4px">LST saat ini: ${kd.lst.toFixed(2)}°C</div>
-    </div>
-    <div class="kp-box">
-      <div class="kp-title">LSTM (Estimasi 2029)</div>
-      <div class="kp-val">${lstEnd.toFixed(2)}°C</div>
-      <div class="kp-sub">${delta>=0?'+':''}${delta}°C dari sekarang</div>
-    </div>
-    <div class="kp-box" style="grid-column:1/-1">
-      <div class="kp-title">🤖 Kesimpulan AI</div>
-      <div class="kp-sub" style="line-height:1.5">${kd.nm} diprediksi <b>${delta>0.3?'mengalami peningkatan':delta<-0.1?'sedikit mendingin':'tetap stabil'}</b> pada zona ${kd.zona} hingga 2029 (estimasi LST ${lstEnd.toFixed(1)}°C). Faktor dominan adalah NDBI (terbangun). Prioritas mitigasi: <b>${prio}</b></div>
-    </div>`;
+  const fiItems=Object.entries(FI_DATA).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const fiMax=fiItems[0][1];
 
-  // feature importance bars
-  document.getElementById('fi-section').innerHTML=`
-    <div class="kp-box">
-      <div class="kp-title">Random Forest — Feature Importance</div>
-      ${FI_ORDER.map(([nm,val])=>`
-        <div class="fi-bar">
-          <span class="fi-name">${nm}</span>
-          <div class="fi-track"><div class="fi-fill" style="width:${(val*100/0.23).toFixed(0)}%"></div></div>
-          <span class="fi-val">${(val*100).toFixed(1)}%</span>
-        </div>`).join('')}
-    </div>`;
+  sec.innerHTML=`
+  <div class="section-hdr" style="margin-bottom:6px">📍 Proyeksi LST: ${kd.nm}</div>
+  <div class="kp-grid" style="margin-bottom:7px">
+    <div class="kp">
+      <div class="kp-t">K-Means Zona</div>
+      <div style="display:inline-block;background:${WARNA[kd.zona]||'#888'};color:#FFFFFF;padding:3px 9px;border-radius:14px;font-size:.72rem;font-weight:700">${kd.zona}</div>
+      <div class="kp-s" style="margin-top:4px">LST: ${kd.lst.toFixed(2)}°C</div>
+    </div>
+    <div class="kp">
+      <div class="kp-t">LSTM Estimasi 2029</div>
+      <div class="kp-v" style="color:${delta>0.2?'#EF4444':'#10B981'}">${lstEnd.toFixed(2)}°C</div>
+      <div class="kp-s">${delta>=0?'+':''}${delta}°C dari sekarang</div>
+    </div>
+    <div class="kp" style="grid-column:1/-1">
+      <div class="kp-t">🤖 GeoAI Kesimpulan · Prioritas Mitigasi: ${prio}</div>
+      <div class="kp-s" style="margin-top:3px;line-height:1.5">${kd.nm} diprediksi <strong>${delta>0.2?'mengalami peningkatan termal':delta<-0.1?'sedikit mendingin':'tetap stabil'}</strong> pada Zona ${kd.zona} hingga 2029 (estimasi LST ${lstEnd.toFixed(1)}°C). Faktor dominan: NDBI (${(FI_DATA['NDBI Mean']*100).toFixed(1)}%) dan kepadatan (${(FI_DATA['Kepadatan']*100).toFixed(1)}%).</div>
+    </div>
+  </div>
+  <div class="cbox" style="margin-bottom:7px"><canvas id="kelChart" style="max-height:160px"></canvas></div>
+  <div class="kp" style="margin-bottom:0">
+    <div class="kp-t" style="margin-bottom:6px">⚡ Feature Importance (Random Forest)</div>
+    ${fiItems.map(([nm,val])=>`<div class="fi-row"><span class="fi-nm">${nm}</span><div class="fi-tr"><div class="fi-fl" style="width:${(val/fiMax*100).toFixed(0)}%"></div></div><span class="fi-v">${(val*100).toFixed(1)}%</span></div>`).join('')}
+  </div>`;
 
-  // chart kelurahan (estimasi historis + proyeksi)
-  const histVals=HIST_DATA.slice(-36).map(d=>+(d[1]+diffFromKota*0.55).toFixed(2));
+  const histKel=HIST_DATA.slice(-36).map(d=>+(d[1]+diff*0.5).toFixed(2));
   const histLbls=HIST_DATA.slice(-36).map(d=>d[0].substring(0,7));
-  const projLbls=years.map(y=>y+'-06');
-  const upper=lstProj.map(v=>+(v+MS.rmse).toFixed(2));
-  const lower=lstProj.map(v=>+(v-MS.rmse).toFixed(2));
-
+  const upper2=lstProj.map(v=>+(v+MS.rmse).toFixed(2));
+  const lower2=lstProj.map(v=>+(v-MS.rmse).toFixed(2));
   if(kelChart)kelChart.destroy();
-  const ctx2=document.getElementById('kelChart').getContext('2d');
-  kelChart=new Chart(ctx2,{type:'line',data:{
-    labels:[...histLbls,...projLbls],
-    datasets:[
-      {label:'Estimasi historis LST',data:[...histVals,...Array(5).fill(null)],borderColor:'#2c7bb6',borderWidth:1.5,pointRadius:0,tension:.3},
-      {label:'Proyeksi LST 2025–2029',data:[...Array(histVals.length).fill(null),...lstProj],borderColor:WARNA[kd.zona]||'#888',borderWidth:2,borderDash:[5,3],pointRadius:4,tension:.3},
-      {label:'Interval ±RMSE',data:[...Array(histVals.length).fill(null),...upper],backgroundColor:'rgba(215,25,28,.08)',borderColor:'transparent',fill:'+1',pointRadius:0},
-      {label:'lower',data:[...Array(histVals.length).fill(null),...lower],borderColor:'transparent',pointRadius:0,fill:false},
-    ]
-  },options:{responsive:true,maintainAspectRatio:true,
-    plugins:{legend:{labels:{font:{size:9},boxWidth:15,filter:i=>i.text!=='lower'}},
-      annotation:{annotations:{line1:{type:'line',xMin:histLbls.length-1,xMax:histLbls.length,borderColor:'#888',borderWidth:1,borderDash:[4,4]}}}},
-    scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}},grid:{display:false}},
-      y:{ticks:{callback:v=>v+'°C',font:{size:9}},
-        title:{display:true,text:'LST (°C)',font:{size:9}}}}}});
+  kelChart=new Chart(document.getElementById('kelChart').getContext('2d'),{
+    type:'line',data:{
+      labels:[...histLbls,...yrs],
+      datasets:[
+        {label:'Est. historis LST',data:[...histKel,...Array(5).fill(null)],
+          borderColor:'#3B82F6',borderWidth:1.5,pointRadius:0,tension:.3},
+        {label:'Proyeksi LST 2025–29',data:[...Array(36).fill(null),...lstProj],
+          borderColor:WARNA[kd.zona]||'#888',borderWidth:2,borderDash:[5,3],
+          pointRadius:4,pointBackgroundColor:WARNA[kd.zona],tension:.3},
+        {label:'Band atas',data:[...Array(36).fill(null),...upper2],
+          backgroundColor:'rgba(239,68,68,.08)',borderColor:'transparent',fill:'+1',pointRadius:0},
+        {label:'Band bawah_',data:[...Array(36).fill(null),...lower2],
+          borderColor:'transparent',pointRadius:0,fill:false},
+      ]
+    },options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#6B7280',font:{size:9},boxWidth:14,filter:i=>i.text!=='Band bawah_'}},},
+      scales:{
+        x:{ticks:{color:'#6B7280',maxTicksLimit:8,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}},
+        y:{ticks:{color:'#6B7280',callback:v=>v+'°C',font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}}
+      }
+    }
+  });
 }
 
-// ── CHATBOT ──
-function jawab(pertanyaan){
-  const q=normq(pertanyaan), qraw=pertanyaan.toLowerCase();
+// ── SPATIAL AI ──
+function normkeyQ(q){return q.replace(/[^a-z0-9]/g,'');}
+function jawab(q){
+  const qn=normq(q);
   // cari kelurahan
-  let best=null, bscore=0;
-  for(const [k,v] of Object.entries(KEL_KB)){
-    const qn=q.replace(/ /g,'');
-    if(qn.includes(k)&&k.length>bscore){best=v;bscore=k.length;}
+  let best=null,bsc=0;
+  for(const[k,v]of Object.entries(KEL_KB)){
+    const qk=normkeyQ(qn);
+    if(qk.includes(k)&&k.length>bsc){best=v;bsc=k.length;}
   }
-  if(best&&bscore>=4&&(q.includes('suhu')||q.includes('panas')||q.includes('dingin')||q.includes('zona')||q.includes('data')||q.includes('bagaimana')||q.includes('proyeksi')||q.includes('prediksi')||q.includes('gimana')||bscore>=7)){
-    const kd=best; const wz=WARNA[kd.zona]||'#888';
-    const lstEnd=+(kd.lst+0.1).toFixed(2);
-    return `📍 <b>${kd.nm}</b> (Kec. ${kd.kc})<br>
-Zona: <span style="background:${wz};color:#fff;padding:1px 7px;border-radius:10px;font-size:.75em">${kd.zona}</span><br>
-LST: <b>${kd.lst}°C</b> | NDVI: ${kd.ndvi} | Terbangun: ${(kd.fraksi*100).toFixed(0)}%<br>
+  // jawab mengapa X panas
+  if((qn.includes('mengapa')||qn.includes('kenapa'))&&best&&bsc>=4){
+    const kd=best;
+    return`📊 <strong>Analisis spasial: Mengapa ${kd.nm} panas?</strong><br><br>
+Berdasarkan dataset penelitian (n=162 kelurahan):<br>
+• LST: <strong>${kd.lst}°C</strong> (rata-rata kota: ${KS.lst_mean.toFixed(1)}°C, selisih ${(kd.lst-KS.lst_mean).toFixed(1)}°C)<br>
+• NDBI: ${kd.ndbi.toFixed(3)} → permukaan terbangun dominan (r=+0,906 vs LST)<br>
+• Fraksi terbangun: ${(kd.fraksi*100).toFixed(0)}% → material kedap air menyerap panas<br>
+• NDVI: ${kd.ndvi.toFixed(3)} → vegetasi sangat minim (r=−0,575 vs LST)<br>
+• Kepadatan: ${kd.kpd.toLocaleString('id')} jiwa/km²<br><br>
+<strong>Kesimpulan GeoAI:</strong> ${kd.nm} panas karena dominasi permukaan terbangun (NDBI #1 feature importance RF: 22,5%) dan minimnya vegetasi pendingin. Intervensi prioritas: penambahan RTH — setiap ΔNDVI +0,1 → estimasi LST turun ~${Math.abs(GRAD_NDVI*0.1).toFixed(1)}°C.`;
+  }
+  if(best&&bsc>=5){
+    const kd=best;
+    return`📍 <strong>${kd.nm}</strong> (Kec. ${kd.kc})<br>
+Zona: <span style="background:${WARNA[kd.zona]||'#888'};color:#FFFFFF;padding:1px 8px;border-radius:10px;font-size:.8em;font-weight:700">${kd.zona}</span><br>
+LST: <strong>${kd.lst}°C</strong> | NDVI: ${kd.ndvi} | Terbangun: ${(kd.fraksi*100).toFixed(0)}%<br>
 Kepadatan: ${kd.kpd.toLocaleString('id')} jiwa/km²<br><br>
-📈 Estimasi LST 2029: <b>~${lstEnd}°C</b><br><br>
 ${getAIText(kd)}`;
   }
-  if(q.includes('terpanas')||q.includes('paling panas'))return `🔴 <b>5 Kelurahan Terpanas:</b><br>${TOP5_PANAS.map((r,i)=>`${i+1}. <b>${r[0]}</b> (${r[1]}) — ${r[2]}°C, zona ${r[3]}`).join('<br>')}`;
-  if(q.includes('terdingin')||q.includes('paling dingin'))return `🔵 <b>5 Kelurahan Terdingin:</b><br>${TOP5_DINGIN.map((r,i)=>`${i+1}. <b>${r[0]}</b> (${r[1]}) — ${r[2]}°C`).join('<br>')}`;
-  if(q.includes('sangat tinggi')||q.includes('inti uhi'))return `🔴 <b>Zona Sangat Tinggi (Inti UHI)</b> — 45 kelurahan, LST 42,54°C.<br>Dibedakan dari Zona Tinggi oleh <b>kepadatan</b> (23.236 vs 9.883 jiwa/km²), bukan suhu semata (Δ=0,29°C, tidak signifikan). Ini zona paparan termal terbesar terhadap manusia.`;
-  if(q.includes('mitigasi')||q.includes('solusi')||q.includes('rekomendasi'))return `🌿 <b>Rekomendasi:</b><br>1. 🌳 Tambah RTH minimal 30%<br>2. 🌿 Atap hijau &amp; dinding hijau<br>3. 💧 SPAH untuk kelembapan mikro<br><br><b>Formula:</b> NDVI +0,1 → LST turun ~${Math.abs(GRAD_NDVI*0.1).toFixed(1)}°C<br>Coba <b>Simulasi Mitigasi</b> di tab Analisis!`;
-  if(q.includes('proyeksi')||q.includes('2029')||q.includes('lstm'))return `📈 <b>Proyeksi Tren Suhu Kota 2025–2029:</b><br>Rata-rata: 28,64°C | Naik: +0,16°C<br>MAE: ${MS.mae}°C | RMSE: ${MS.rmse}°C | R²: ${MS.r2}<br><br>⚠️ Ini suhu udara BMKG (bukan LST permukaan).<br>Lihat grafik di tab 📈 Proyeksi!`;
-  if(q.includes('faktor')||q.includes('penyebab')||q.includes('kenapa')&&!q.includes('kelurahan'))return `🔍 <b>Faktor Dominan:</b><br>• NDBI: r = <b>+0,906</b><br>• Fraksi terbangun: r = <b>+0,848</b><br>• NDVI: r = <b>−0,575</b> (protektif)<br><br>Feature importance RF: NDBI 22,5% → Kepadatan 18,0%`;
-  if(q.includes('metode'))return `🤖 <b>3 Metode:</b><br>1. <b>K-Means</b> → 4 zona (Silhouette 0,374)<br>2. <b>Random Forest</b> → feature importance (87,9% internal)<br>3. <b>LSTM</b> → proyeksi tren suhu (R²=0,233)`;
-  if(q.includes('simulasi'))return `🧪 <b>Simulasi Mitigasi</b> tersedia saat klik kelurahan di peta!<br>Geser slider vegetasi/terbangun untuk lihat estimasi perubahan LST secara real-time.`;
-  if(q.includes('halo')||q.includes('hai')||q.length<5)return `Halo! 👋 Saya asisten penelitian UHI Surabaya.<br><br>Coba:<br>• Nama kelurahan (contoh: "Gubeng" atau "Perak Barat")<br>• "5 kelurahan terpanas?"<br>• "Proyeksi suhu 2029?"<br>• "Faktor dominan UHI?"`;
-  if(best)return `📍 <b>${best.nm}</b> — ${best.lst}°C, zona ${best.zona}`;
-  return `Coba tanya: nama kelurahan, "terpanas?", "proyeksi 2029?", "faktor dominan?", atau "rekomendasi mitigasi?"`;
+  if(qn.includes('terpanas')||qn.includes('paling panas'))
+    return`🔴 <strong>5 Kelurahan Terpanas (dataset penelitian):</strong><br>${TOP5_PANAS.map((r,i)=>`${i+1}. <strong>${r[0]}</strong> (${r[1]}) — ${r[2]}°C · zona ${r[3]}`).join('<br>')}`;
+  if(qn.includes('terdingin'))
+    return`🔵 <strong>5 Kelurahan Terdingin:</strong><br>${TOP5_DINGIN.map((r,i)=>`${i+1}. <strong>${r[0]}</strong> (${r[1]}) — ${r[2]}°C`).join('<br>')}`;
+  if(qn.includes('faktor')||qn.includes('penyebab')||qn.includes('dominan'))
+    return`⚡ <strong>Faktor Dominan UHI Surabaya (RF + Pearson):</strong><br><br>Feature importance Random Forest:<br>${Object.entries(FI_DATA).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`• ${k}: <strong>${(v*100).toFixed(1)}%</strong>`).join('<br>')}<br><br>Korelasi Pearson vs LST:<br>• NDBI: r=<strong>+0,906</strong> (sangat kuat)<br>• Fraksi terbangun: r=<strong>+0,848</strong><br>• NDVI: r=<strong>−0,575</strong> (protektif)`;
+  if(qn.includes('proyeksi')||qn.includes('2029')||qn.includes('lstm'))
+    return`📈 <strong>Proyeksi LSTM 2025–2029:</strong><br>Rata-rata: 28,64°C | Kenaikan: +0,16°C<br>MAE: ${MS.mae}°C | RMSE: ${MS.rmse}°C | R²: ${MS.r2}<br><br>⚠ Ini suhu <strong>udara</strong> BMKG (bukan LST permukaan). R² rendah → proyeksi arah tren, bukan prediksi presisi.<br>Lihat grafik di tab 📈 Proyeksi!`;
+  if(qn.includes('mitigasi')||qn.includes('solusi')||qn.includes('inti uhi'))
+    return`🌿 <strong>Rekomendasi Mitigasi Zona Inti UHI:</strong><br><br>Berdasarkan gradien korelasi dataset:<br>• ΔNDVI +0,1 → LST turun ~${Math.abs(GRAD_NDVI*0.1).toFixed(1)}°C<br>• Kurangi fraksi terbangun 10% → LST turun ~${Math.abs(GRAD_FRAK*0.1).toFixed(1)}°C<br><br>Prioritas intervensi:<br>1. 🌳 Tambah RTH minimal 30%<br>2. 🌿 Atap hijau & dinding hijau<br>3. 💧 SPAH untuk kelembapan mikro<br><br>10 kel. prioritas: Krembangan Utara, Putat Jaya, Wonorejo, Perak Timur, Kupang Krajan...`;
+  if(qn.includes('platform')||qn.includes('sistem')||qn.includes('geoai'))
+    return`🖥 <strong>GeoAI DSS Platform — 5 Modul:</strong><br><br>① Spatial Analysis (GEE + Landsat)<br>② UHI Zoning (K-Means, k=4, Silhouette 0,374)<br>③ AI Interpretation (RF, akurasi 87,9% internal)<br>④ Future Projection (LSTM, MAE 0,61°C)<br>⑤ Mitigation Simulation (berbasis korelasi Pearson)`;
+  if(qn.includes('halo')||qn.includes('hai')||qn.length<5)
+    return`Halo! 👋 Saya <strong>GeoAI Spatial Assistant</strong>.<br><br>Berbeda dari chatbot biasa, saya menjawab <em>berdasarkan dataset penelitian</em> 162 kelurahan Surabaya — bukan internet.<br><br>Coba tanya:<br>• "Mengapa Ngagel panas?"<br>• "Kelurahan terpanas?"<br>• "Faktor dominan UHI?"`;
+  if(best)return`📍 <strong>${best.nm}</strong> — LST ${best.lst}°C, Zona ${best.zona}<br>${getAIText(best)}`;
+  return`Tanyakan:<br>• Nama kelurahan (contoh: "Perak Barat")<br>• "Mengapa [kelurahan] panas?"<br>• "Faktor dominan UHI?"<br>• "Proyeksi suhu 2029?"<br>• "Mitigasi zona Inti UHI?"`;
 }
-let hist=[];
-const cmsgs=document.getElementById('cmsgs'),ci=document.getElementById('ci'),sb_=document.getElementById('sb');
-function addMsg(txt,role){const el=document.createElement('div');el.className='msg '+role;if(role==='ai')el.innerHTML=`<div class="sndr">🤖 Asisten UHI</div>${txt}`;else el.textContent=txt;cmsgs.appendChild(el);cmsgs.scrollTop=9999;return el}
-function addTyping(){const el=document.createElement('div');el.className='msg ai';el.innerHTML=`<div class="sndr">🤖</div><div class="dots"><span></span><span></span><span></span></div>`;cmsgs.appendChild(el);cmsgs.scrollTop=9999;return el}
-async function sendChat(){const txt=ci.value.trim();if(!txt)return;ci.value='';addMsg(txt,'user');sb_.disabled=ci.disabled=true;const ty=addTyping();await new Promise(r=>setTimeout(r,400+Math.random()*300));ty.remove();addMsg(jawab(txt),'ai');sb_.disabled=ci.disabled=false;ci.focus()}
-sb_.addEventListener('click',sendChat);
-ci.addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});
-document.querySelectorAll('.sugg').forEach(s=>s.addEventListener('click',()=>{ci.value=s.textContent;sendChat()}));
+
+const cmsgs=document.getElementById('cmsgs'),ci=document.getElementById('ci'),sb=document.getElementById('sb');
+function addMsg(txt,role){const el=document.createElement('div');el.className='msg '+role;if(role==='ai')el.innerHTML=`<div class="sndr">🤖 GeoAI</div>${txt}`;else el.textContent=txt;cmsgs.appendChild(el);cmsgs.scrollTop=9999;return el;}
+function addTyping(){const el=document.createElement('div');el.className='msg ai';el.innerHTML=`<div class="sndr">🤖 GeoAI</div><div class="dots"><span></span><span></span><span></span></div>`;cmsgs.appendChild(el);cmsgs.scrollTop=9999;return el;}
+async function sendChat(){const txt=ci.value.trim();if(!txt)return;ci.value='';addMsg(txt,'user');sb.disabled=ci.disabled=true;const ty=addTyping();await new Promise(r=>setTimeout(r,500+Math.random()*300));ty.remove();addMsg(jawab(txt),'ai');sb.disabled=ci.disabled=false;ci.focus();}
+sb.addEventListener('click',sendChat);
+ci.addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+document.querySelectorAll('.sugg').forEach(s=>s.addEventListener('click',()=>{ci.value=s.textContent;sendChat();}));
 </script>
 </body>
 </html>
