@@ -12,7 +12,7 @@
   /* palette — dark teal professional */
   --bg:#F0F4F8; --surface:#FFFFFF; --surface2:#F8FAFC; --surface3:#EEF2F7;
   --accent:#0694A2; --accent2:#1A56DB; --warn:#F59E0B; --danger:#EF4444;
-  --rendah:#3B82F6; --sedang:#10B981; --tinggi:#F59E0B; --st:#EF4444;
+  --rendah:#2c7bb6; --sedang:#abd9e9; --tinggi:#fdae61; --st:#d7191c;
   --text:#111827; --text2:#4B5563; --text3:#9CA3AF;
   --border:#E5E7EB; --card-glow:0 2px 8px rgba(6,148,162,.15);
 }
@@ -94,9 +94,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .kright{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .zbadge{padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700;color:#fff}
 .status-pill{font-size:.63rem;font-weight:700;border-radius:10px;padding:2px 8px}
-.sp-safe{background:rgba(16,185,129,.15);color:var(--sedang);border:1px solid rgba(16,185,129,.3)}
-.sp-warn{background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.3)}
-.sp-danger{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+.sp-safe{background:#deebf7;color:#1a6a9a;border:1px solid #6baed6}
+.sp-warn{background:#fee8c8;color:#b35806;border:1px solid #fdae61}
+.sp-danger{background:#fee0d2;color:#a50f15;border:1px solid #d7191c}
 /* stat grid */
 .sg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .sb{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;padding:10px;transition:.2s}
@@ -161,7 +161,7 @@ input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;height:4p
 .fi-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
 .fi-nm{width:88px;font-size:.7rem;color:var(--text2);flex-shrink:0}
 .fi-tr{flex:1;height:7px;background:#E5E7EB;border-radius:3px;overflow:hidden}
-.fi-fl{height:100%;border-radius:3px;background:linear-gradient(90deg,#0694A2,#1A56DB);transition:width .8s}
+.fi-fl{height:100%;border-radius:3px;background:linear-gradient(90deg,#2c7bb6,#d7191c);transition:width .8s}
 .fi-v{font-size:.68rem;font-weight:700;color:#0694A2;width:32px;text-align:right}
 .note{background:#F0FDFA;border:1px solid #99F6E4;
   border-radius:7px;padding:9px;font-size:.72rem;color:var(--text2);line-height:1.5}
@@ -367,7 +367,7 @@ const LSTM_DATA=RD.lstm,HIST_DATA=RD.hist,GRAD_NDVI=RD.grad_ndvi,GRAD_FRAK=RD.gr
 const MS=RD.model_stats,KS=RD.kota_stats,FI_DATA=RD.fi;
 
 // ── COLORS ──
-const WARNA={"Rendah":"#3B82F6","Sedang":"#10B981","Tinggi":"#F59E0B","Sangat Tinggi":"#EF4444"};
+const WARNA={"Rendah":"#2c7bb6","Sedang":"#abd9e9","Tinggi":"#fdae61","Sangat Tinggi":"#d7191c"};
 const ZONA_MAP={"Dingin":"Rendah","Sedang":"Sedang","Panas":"Tinggi","Sangat Panas":"Sangat Tinggi"};
 function normkey(s){return s.toLowerCase().replace(/[^a-z0-9]/g,'');}
 function normq(s){return s.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();}
