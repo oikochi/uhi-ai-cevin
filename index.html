@@ -43,9 +43,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .ai-dot{width:7px;height:7px;border-radius:50%;background:#10B981;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.2)}}
 /* ── LAYOUT ── */
-.layout{display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 52px)}
+.layout{display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 52px);overflow:hidden;}
 /* ── MAP SIDE ── */
-.map-side{display:flex;flex-direction:column;position:relative}
+.map-side{display:flex;flex-direction:column;position:relative;overflow:hidden;min-height:0;flex:1;}
 /* filter bar */
 .fbar{background:var(--surface);border-bottom:1px solid var(--border);
   padding:8px 14px;display:flex;gap:8px;align-items:center;flex-shrink:0;z-index:500}
@@ -61,7 +61,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   background:rgba(255,255,255,.95);border:1px solid #D1D5DB;
   color:var(--text2);padding:5px 14px;border-radius:20px;font-size:.72rem;
   z-index:999;pointer-events:none;backdrop-filter:blur(8px)}
-#map{flex:1}
+#map{position:absolute;top:0;left:0;right:0;bottom:0;}
 /* ── RIGHT PANEL ── */
 .right{background:var(--surface);border-left:1px solid var(--border);
   display:flex;flex-direction:column;overflow:hidden}
@@ -73,7 +73,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 .tab:hover:not(.active){color:#374151;background:#F3F4F6}
 /* panels */
-.panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0}
+.panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0;overscroll-behavior:contain;}
 .panel.active{display:flex}
 /* custom scrollbar */
 ::-webkit-scrollbar{width:3px}
@@ -256,7 +256,9 @@ input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;height:4p
       <span class="fc" id="fcount"></span>
     </div>
     <div class="mhint" id="mhint">🖱 Klik kelurahan untuk analisis spasial</div>
-    <div id="map"></div>
+    <div id="map-container" style="position:relative;flex:1;min-height:0;">
+      <div id="map" style="position:absolute;top:0;left:0;right:0;bottom:0;"></div>
+    </div>
   </div>
 
   <!-- RIGHT PANEL -->
@@ -427,7 +429,8 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
 }));
 
 // ── MAP ──
-const map=L.map('map',{zoomControl:true}).setView([-7.28,112.73],12);
+// force layout sebelum init map
+const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView([-7.28,112.73],12);
 // Primary tile: CartoDB Light
 const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
   {attribution:'© OpenStreetMap contributors © CARTO',maxZoom:19});
@@ -475,6 +478,8 @@ fetch('data/surabaya_uhi.geojson').then(r=>r.json()).then(gj=>{
     }
   }).addTo(map);
   map.fitBounds(geoLayer.getBounds());
+  setTimeout(()=>{ map.invalidateSize(); map.fitBounds(geoLayer.getBounds()); }, 200);
+  setTimeout(()=>{ map.invalidateSize(); }, 500);
 }).catch(e=>{
   const h=document.getElementById('mhint');
   h.textContent='⚠ Gagal memuat peta — buka dari GitHub Pages';
@@ -621,8 +626,8 @@ function buildCityChart(){
       {label:'lower_',data:[...Array(hV.length).fill(null),...lower],
         borderColor:'rgba(239,68,68,.05)',pointRadius:0,borderWidth:0,fill:false},
     ]
-  },options:{responsive:true,maintainAspectRatio:true,
-    plugins:{legend:{labels:{color:'#6B7280',font:{size:9},boxWidth:16,
+  },options:{responsive:true,events:[],maintainAspectRatio:true,
+    events:[],plugins:{legend:{labels:{color:'#6B7280',font:{size:9},boxWidth:16,
       filter:i=>i.text!=='lower_'}},
       tooltip:{callbacks:{title:t=>t[0].label,label:c=>c.dataset.label+': '+c.raw+'°C'}}},
     scales:{
@@ -698,7 +703,7 @@ function buildKelChart(kd){
         {label:'Band bawah_',data:[...Array(36).fill(null),...lower2],
           borderColor:'transparent',pointRadius:0,fill:false},
       ]
-    },options:{responsive:true,maintainAspectRatio:false,
+    },options:{responsive:true,events:[],maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#6B7280',font:{size:9},boxWidth:14,filter:i=>i.text!=='Band bawah_'}},},
       scales:{
         x:{ticks:{color:'#6B7280',maxTicksLimit:8,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}},
@@ -762,6 +767,7 @@ function addTyping(){const el=document.createElement('div');el.className='msg ai
 async function sendChat(){const txt=ci.value.trim();if(!txt)return;ci.value='';addMsg(txt,'user');sb.disabled=ci.disabled=true;const ty=addTyping();await new Promise(r=>setTimeout(r,500+Math.random()*300));ty.remove();addMsg(jawab(txt),'ai');sb.disabled=ci.disabled=false;ci.focus();}
 sb.addEventListener('click',sendChat);
 ci.addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+window.addEventListener('resize',()=>{ if(map) map.invalidateSize(); });
 document.querySelectorAll('.sugg').forEach(s=>s.addEventListener('click',()=>{ci.value=s.textContent;sendChat();}));
 </script>
 </body>
