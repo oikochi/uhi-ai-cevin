@@ -1,0 +1,11 @@
+Gabriel Yoshikazu Oukawa, Patricia Krecl, Admir Créso Targino, Ligia Flávia Antunes Batista,
+Advantages of modeling the urban heat island intensity: A tool for implementing nature-based solutions,
+Sustainable Cities and Society,
+Volume 102,
+2024,
+105204,
+ISSN 2210-6707,
+https://doi.org/10.1016/j.scs.2024.105204.
+(https://www.sciencedirect.com/science/article/pii/S2210670724000337)
+Abstract: Climate change affects the lives of billions of urban residents worldwide. Amidst this scenario, the urban heat island (UHI) exacerbates heat stress and worsens thermal discomfort. Here, we approach the UHI phenomenon from the perspectives of both machine learning and nature-based solutions (NBS). Random forest models were built by integrating in situ air temperature (Tair) data and a pool of on- and off-site variables, within the context of Local Climate Zones (LCZ). The models utilized both Tair and the urban heat island intensity (UHII) as response variables. All models achieved a high explanatory power (R2 ≥ 0.82). However, those directly modeling UHII proved more suitable because LCZ emerged as the primary contributors of UHII’s variance. The NBS interventions showed that even modest increments of 10% in tree cover have the potential to reduce the UHII by up to 65% in winter and 55% in summer. This underscores the potential of modifying land use and cover as a tool to mitigate the UHI. This methodology holds the potential for application in other cities with similar climate. Our high-performing models pave the way for a streamlined approach in developing and implementing NBS, offering an efficient means to assess their impact and effectiveness.
+Keywords: Random forests; Nature-based solutions; Local Climate Zones; SHAP values
